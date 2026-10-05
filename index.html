@@ -59,9 +59,10 @@ function update(){
 }
 function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
 function drawTerrainTile(im,p,key){
-  // Terrain assets are already normalized to the exact 88x44 isometric tile.
-  // Draw them directly so adjacent land tiles meet without an artificial seam.
-  ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
+  // Slightly overlap adjacent terrain images so transparent/interpolated edge pixels
+  // cannot expose the canvas background between otherwise touching isometric tiles.
+  const w=TILE_W+2,h=TILE_H+2;
+  ctx.drawImage(im,p.x-w/2,p.y-h/2,w,h);
 }
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
  const names=['aro','metsa','vesi'];
