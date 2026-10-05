@@ -144,6 +144,7 @@ canvas.addEventListener('pointermove',e=>{
   if(Math.abs(dx)>6||Math.abs(dy)>6) pointerMoved=true;
   if(pointerMoved){camX=pointerStartCamX-dx;camY=pointerStartCamY-dy;draw();}
 });
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('pointerup',e=>{
   if(!drag)return;
   const wasMoved=pointerMoved; drag=false;
@@ -151,20 +152,29 @@ canvas.addEventListener('pointerup',e=>{
   if(wasMoved)return;
   const t=fromIso(e.clientX,e.clientY);
   if(!inside(t.x,t.y))return;
-  // Town selection always wins over unit movement.
-  for(const town of towns){
-    if(t.x===town.x&&t.y===town.y){
-      buildMode=null; buildTown=town;
-      const isOwnTown=activeOwner===(town.name==='Nikkilä'?0:1);
-      document.getElementById('townName').textContent=town.name;
-      document.getElementById('buildings').innerHTML='<p><strong>Rakennukset</strong></p>'+town.buildings.map(b=>'<p style="margin:5px 0">'+b.name+'</p>').join('');
-      document.getElementById('buildOptions').style.display='none';
-      document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto (2 🔨)</button> <button id="buildTokmanni">Tokmanni (3 🔨)</button> <button id="buildLegion">Legioona (3 🪙 + 3 🎭)</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
-      document.getElementById('town').style.display='block';
-      return;
+
+  // Right click opens/chooses; left click is reserved for active-unit movement.
+  if(e.button===2){
+    for(const town of towns){
+      if(t.x===town.x&&t.y===town.y){
+        buildMode=null; buildTown=town;
+        const isOwnTown=activeOwner===(town.name==='Nikkilä'?0:1);
+        document.getElementById('townName').textContent=town.name;
+        document.getElementById('buildings').innerHTML='<p><strong>Rakennukset</strong></p>'+town.buildings.map(b=>'<p style="margin:5px 0">'+b.name+'</p>').join('');
+        document.getElementById('buildOptions').style.display='none';
+        document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto (2 🔨)</button> <button id="buildTokmanni">Tokmanni (3 🔨)</button> <button id="buildLegion">Legioona (3 🪙 + 3 🎭)</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
+        document.getElementById('town').style.display='block';
+        return;
+      }
     }
+    const unitIndex=units.findIndex(u=>u.x===t.x&&u.y===t.y&&u.owner===activeOwner);
+    if(unitIndex!==-1){active=unitIndex; update(); draw(); return;}
+    return;
   }
+
   if((buildMode==='kirjasto'||buildMode==='tokmanni') && buildTown){const dx=t.x-buildTown.x,dy=t.y-buildTown.y;if(Math.max(Math.abs(dx),Math.abs(dy))<=2 && !(dx===0&&dy===0) && inside(t.x,t.y) && MAP[t.y][t.x]!==2 && !towns.some(tt=>tt.buildings.some(b=>b.x===t.x&&b.y===t.y))){const cost=buildMode==='kirjasto'?2:3;if(states[activeOwner].work<cost){document.getElementById('info').textContent='Rakentaminen vaatii '+cost+' vasaraa.';return;}states[activeOwner].work-=cost;buildTown.buildings.push({name:buildMode==='tokmanni'?'Tokmanni':'Kirjasto',mark:buildMode==='tokmanni'?'T':'B',x:t.x,y:t.y});buildMode=null;buildTown=null;document.getElementById('info').textContent='Klikkaa viereistä ruutua siirtääksesi aktiivista legioonaa.';update();draw();return;}return;}
+
+  // Left click: move the active unit, and nothing else.
   moveTo(t.x,t.y);
 });
 addEventListener('keydown',e=>{if(busy)return;const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(m){e.preventDefault();const a=units[active];if(a&&a.owner===activeOwner)moveTo(a.x+m[0],a.y+m[1])}});
