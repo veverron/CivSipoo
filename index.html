@@ -20,13 +20,7 @@ const images={};
 const files={aro:'assets/aro.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',legioonaNikkila:'assets/legioona_nikkila.png',legioonaSoderkulla:'assets/legioona_soderkulla.png',tiedustelijaNikkila:'assets/tiedustelija_nikkila.png',tiedustelijaSoderkulla:'assets/tiedustelija_soderkulla.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png',tokmanni:'assets/tokmanni.png',kirjasto:'assets/kirjasto.png'};
 let loaded=0; const assetCount=Object.keys(files).length;
 for(const [k,s] of Object.entries(files)){const im=new Image();im.onload=()=>{if(++loaded===assetCount)start()};im.onerror=()=>document.getElementById('info').textContent='Assetin lataus epäonnistui: '+k;im.src=s;images[k]=im}
-const MAP=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>{
-  const edge=(x<2||y<2||x>COLS-3||y>ROWS-3); if(edge && (x<7||y<5||x>25)) return 2;
-  if((x+y*3)%13===0 || (x*7+y*2)%19===0) return 1; return 0;
-}));
-// Water features / coastlines, leaving both town centers on land.
-for(let y=0;y<ROWS;y++){MAP[y][0]=2;MAP[y][1]=2;MAP[y][COLS-1]=2;}
-for(let x=0;x<COLS;x++){MAP[0][x]=2;MAP[ROWS-1][x]=2;}
+const MAP=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>0));
 const towns=[{name:'Nikkilä',x:21,y:9,buildings:[{name:'Kuplahalli',mark:'K',x:22,y:9}]},{name:'Söderkulla',x:9,y:16,buildings:[{name:'Lidl',mark:'L',x:10,y:16}]}];
 let buildMode=null,buildTown=null;
 for(const t of towns){for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
@@ -59,10 +53,9 @@ function update(){
 }
 function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
 function drawTerrainTile(im,p,key){
-  // Slightly overlap adjacent terrain images so transparent/interpolated edge pixels
-  // cannot expose the canvas background between otherwise touching isometric tiles.
-  const w=TILE_W+2,h=TILE_H+2;
-  ctx.drawImage(im,p.x-w/2,p.y-h/2,w,h);
+  // Terrain assets are already normalized to the exact 88x44 isometric tile.
+  // Draw them directly so adjacent land tiles meet without an artificial seam.
+  ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
 }
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
  const names=['aro','metsa','vesi'];
