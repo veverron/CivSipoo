@@ -29,7 +29,7 @@ for(let y=0;y<ROWS;y++){MAP[y][0]=2;MAP[y][1]=2;MAP[y][COLS-1]=2;}
 for(let x=0;x<COLS;x++){MAP[0][x]=2;MAP[ROWS-1][x]=2;}
 const towns=[{name:'Nikkilä',x:21,y:9,buildings:[{name:'Kuplahalli',mark:'K',x:22,y:9}]},{name:'Söderkulla',x:9,y:16,buildings:[{name:'Lidl',mark:'L',x:10,y:16}]}];
 let buildMode=null,buildTown=null;
-for(const t of towns){for(let dy=-u.move;dy<=u.move;dy++)for(let dx=-u.move;dx<=u.move;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
+for(const t of towns){for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
 const units=[{x:21,y:9,owner:0,move:1,maxMove:1,attack:2,defense:1,hp:4},{x:9,y:16,owner:1,move:1,maxMove:1,attack:2,defense:1,hp:4}];
 const states=[{name:'Nikkilä',gold:1,work:10,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:10,entertainment:0,research:0}];
 let activeOwner=0,active=0,year=4000,busy=false;
