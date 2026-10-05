@@ -129,7 +129,7 @@ function moveTo(x,y){
 }
 document.getElementById('endTurn').addEventListener('click',()=>{if(!busy)finish();});
 document.getElementById('buildButton').addEventListener('click',()=>{document.getElementById('buildOptions').style.display='block';});
-document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}});
+document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildLegion'){const owner=activeOwner,st=states[owner],town=buildTown;const occupied=units.some(u=>u.x===town.x&&u.y===town.y);if(st.gold>=3&&st.entertainment>=3&&!occupied){st.gold-=3;st.entertainment-=3;units.push({x:town.x,y:town.y,owner,move:1,attack:2,defense:1});active=units.length-1;document.getElementById('town').style.display='none';document.getElementById('info').textContent='Legioona rakennettu.';update();draw();}else if(occupied){document.getElementById('info').textContent='Taajaman keskuksessa on jo yksikkö.';}else{document.getElementById('info').textContent='Legioonan rakentaminen vaatii 3 kultaa ja 3 viihdettä.';} }});
 let pointerStartX=0,pointerStartY=0,pointerStartCamX=0,pointerStartCamY=0,pointerMoved=false;
 canvas.addEventListener('pointerdown',e=>{
   if(busy)return;
@@ -159,7 +159,7 @@ canvas.addEventListener('pointerup',e=>{
       document.getElementById('townName').textContent=town.name;
       document.getElementById('buildings').innerHTML='<p><strong>Rakennukset</strong></p>'+town.buildings.map(b=>'<p style="margin:5px 0">'+b.name+'</p>').join('');
       document.getElementById('buildOptions').style.display='none';
-      document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto</button> <button id="buildTokmanni">Tokmanni</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
+      document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto</button> <button id="buildTokmanni">Tokmanni</button> <button id="buildLegion">Legioona (3 🪙 + 3 🎭)</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
       document.getElementById('town').style.display='block';
       return;
     }
