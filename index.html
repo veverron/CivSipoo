@@ -17,7 +17,7 @@ const town=document.getElementById('town');
 document.getElementById('closeTown').addEventListener('click',()=>{town.style.display='none';});
 const COLS=30,ROWS=24,TILE_W=88,TILE_H=44,ORIGIN_X=COLS*TILE_W/2,ORIGIN_Y=60,STEP=20;
 const images={};
-const files={pelto:'assets/pelto.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',legioonaNikkila:'assets/legioona_nikkila.png',legioonaSoderkulla:'assets/legioona_soderkulla.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png',tokmanni:'assets/tokmanni.png',kirjasto:'assets/kirjasto.png'};
+const files={aro:'assets/aro.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',legioonaNikkila:'assets/legioona_nikkila.png',legioonaSoderkulla:'assets/legioona_soderkulla.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png',tokmanni:'assets/tokmanni.png',kirjasto:'assets/kirjasto.png'};
 let loaded=0; const assetCount=Object.keys(files).length;
 for(const [k,s] of Object.entries(files)){const im=new Image();im.onload=()=>{if(++loaded===assetCount)start()};im.onerror=()=>document.getElementById('info').textContent='Assetin lataus epäonnistui: '+k;im.src=s;images[k]=im}
 const MAP=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>{
@@ -63,7 +63,7 @@ function drawTerrainTile(im,p,key){
   ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
 }
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
- const names=['pelto','metsa','vesi'];
+ const names=['aro','metsa','vesi'];
  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const p=iso(x,y);const key=names[MAP[y][x]];drawTerrainTile(images[key],p,key);
 }
  // Town centers and their first buildings.
