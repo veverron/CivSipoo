@@ -7,8 +7,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101010}bod
 #brand{font-family:Georgia,serif;font-size:25px;letter-spacing:4px;color:#e7d09a;text-shadow:0 2px 2px #000;font-weight:bold}
 #year{position:absolute;right:16px;top:12px;background:#17130d;color:#e7d09a;border:1px solid #9c783e;border-radius:5px;padding:7px 13px;font-family:Georgia,serif;font-weight:bold;font-size:16px;letter-spacing:.5px}
 #info{position:fixed;z-index:3;left:8px;top:70px;background:#000c;color:#fff;padding:7px 10px;font-size:13px;pointer-events:none}
+#resources{position:fixed;z-index:4;right:12px;top:70px;background:#17130dcc;color:#f4ead0;border:1px solid #9c783e;border-radius:5px;padding:8px 11px;font-family:Georgia,serif;font-size:14px;line-height:1.55;box-shadow:0 2px 10px #0008}#resources b{color:#e7d09a}
 #town{display:none;position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);background:#f4ead0;color:#211b12;border:3px solid #5b4428;border-radius:6px;min-width:230px;padding:14px;box-shadow:0 8px 30px #0008}#town h2{margin:0 0 8px;font-size:21px}#town p{margin:5px 0 12px}#town button{padding:8px 12px;font-weight:bold}
-</style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Klikkaa viereistä ruutua siirtääksesi aktiivista legioonaa.</div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
+</style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Klikkaa viereistä ruutua siirtääksesi aktiivista legioonaa.</div><div id="resources"><b id="stateLabel">Vuoro: Nikkilä</b><br>🪙 Kulta: <span id="goldValue">1</span><br>🔨 Työ: <span id="workValue">0</span><br>🎭 Viihde: <span id="entertainmentValue">0</span><br>⚗️ Tutkimus: <span id="researchValue">0</span><hr style="border:0;border-top:1px solid #9c783e;margin:7px 0"><b>Legioona <span id="unitNumber">1</span></b><br>Liike: <span id="moveValue">1</span><br>Hyökkäys: <span id="attackValue">2</span><br>Puolustus: <span id="defenseValue">1</span><br><button id="endTurn" style="margin-top:8px;padding:5px 8px;font-weight:bold">Lopeta vuoro</button></div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><div id="buildMenu" style="margin:10px 0 12px"><button id="buildButton">Rakenna rakennus</button><div id="buildOptions" style="display:none;margin-top:8px"></div></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;
@@ -16,7 +17,7 @@ const town=document.getElementById('town');
 document.getElementById('closeTown').addEventListener('click',()=>{town.style.display='none';});
 const COLS=30,ROWS=24,TILE_W=88,TILE_H=44,ORIGIN_X=COLS*TILE_W/2,ORIGIN_Y=60,STEP=20;
 const images={};
-const files={pelto:'assets/pelto.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png'};
+const files={pelto:'assets/pelto.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',legioonaNikkila:'assets/legioona_nikkila.png',legioonaSoderkulla:'assets/legioona_soderkulla.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png',tokmanni:'assets/tokmanni.png',kirjasto:'assets/kirjasto.png'};
 let loaded=0; const assetCount=Object.keys(files).length;
 for(const [k,s] of Object.entries(files)){const im=new Image();im.onload=()=>{if(++loaded===assetCount)start()};im.onerror=()=>document.getElementById('info').textContent='Assetin lataus epäonnistui: '+k;im.src=s;images[k]=im}
 const MAP=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>{
@@ -27,8 +28,11 @@ const MAP=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>{
 for(let y=0;y<ROWS;y++){MAP[y][0]=2;MAP[y][1]=2;MAP[y][COLS-1]=2;}
 for(let x=0;x<COLS;x++){MAP[0][x]=2;MAP[ROWS-1][x]=2;}
 const towns=[{name:'Nikkilä',x:21,y:9,buildings:[{name:'Kuplahalli',mark:'K',x:22,y:9}]},{name:'Söderkulla',x:9,y:16,buildings:[{name:'Lidl',mark:'L',x:10,y:16}]}];
+let buildMode=null,buildTown=null;
 for(const t of towns){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
-const units=[{x:17,y:10},{x:12,y:14}]; let active=0,year=4000,busy=false;
+const units=[{x:17,y:10,owner:0,move:1,attack:2,defense:1},{x:12,y:14,owner:1,move:1,attack:2,defense:1}];
+const states=[{name:'Nikkilä',gold:1,work:0,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:1,entertainment:0,research:0}];
+let activeOwner=0,active=0,year=4000,busy=false;
 let camX=0,camY=0,drag=false,sx=0,sy=0,cx=0,cy=0;
 function resize(){const d=devicePixelRatio||1;canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
 addEventListener('resize',resize);
@@ -36,23 +40,107 @@ function iso(x,y){return{x:ORIGIN_X+(x-y)*TILE_W/2,y:ORIGIN_Y+(x+y)*TILE_H/2}}
 function fromIso(px,py){const a=(px+camX-ORIGIN_X)/(TILE_W/2),b=(py+camY-ORIGIN_Y)/(TILE_H/2);return{x:Math.round((a+b)/2),y:Math.round((b-a)/2)}}
 function inside(x,y){return x>=0&&x<COLS&&y>=0&&y<ROWS}
 function centerOn(u){const p=iso(u.x,u.y);camX=p.x-innerWidth/2;camY=p.y-innerHeight/2}
-function start(){resize();centerOn(units[active]);update();draw()}
-function update(){document.getElementById('year').textContent=year+' eKr.'}
+function start(){resize();const u=units.find(u=>u.owner===activeOwner);if(u)centerOn(u);else centerOnTown(activeOwner);update();draw()}
+function centerOnTown(owner){const t=towns[owner];if(t){const p=iso(t.x,t.y);camX=p.x-innerWidth/2;camY=p.y-innerHeight/2;}}
+function update(){
+ const st=states[activeOwner], u=units[active];
+ document.getElementById('year').textContent=year+' eKr.';
+ document.getElementById('stateLabel').textContent='Vuoro: '+st.name;
+ document.getElementById('goldValue').textContent=st.gold;
+ document.getElementById('workValue').textContent=st.work;
+ document.getElementById('entertainmentValue').textContent=st.entertainment;
+ document.getElementById('researchValue').textContent=st.research;
+ document.getElementById('unitNumber').textContent=u&&u.owner===activeOwner?units.indexOf(u)+1:'—';
+ document.getElementById('moveValue').textContent=u&&u.owner===activeOwner?u.move:'—';
+ document.getElementById('attackValue').textContent=u&&u.owner===activeOwner?u.attack:'—';
+ document.getElementById('defenseValue').textContent=u&&u.owner===activeOwner?u.defense:'—';
+ document.getElementById('resources').title=u&&u.owner===activeOwner?'Legioona '+(units.indexOf(u)+1)+' / '+st.name:st.name+' / ei yksikköä';
+}
 function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
+function drawTerrainTile(im,p,key){
+  if(key==='vesi'){ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);return;}
+  // Draw only the top face of the source tile, clipped to the map diamond.
+  // This removes the dark slab edges between adjacent terrain tiles.
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(p.x,p.y-TILE_H/2);
+  ctx.lineTo(p.x+TILE_W/2,p.y);
+  ctx.lineTo(p.x,p.y+TILE_H/2);
+  ctx.lineTo(p.x-TILE_W/2,p.y);
+  ctx.closePath();
+  ctx.clip();
+  const srcW=im.width-10, srcH=Math.floor(im.height*0.64), srcX=5, srcY=Math.floor(im.height*0.16);
+  ctx.drawImage(im,srcX,srcY,srcW,srcH,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
+  ctx.restore();
+}
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
  const names=['pelto','metsa','vesi'];
- for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const p=iso(x,y);ctx.drawImage(images[names[MAP[y][x]]],p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
-ctx.strokeStyle='rgba(78,66,42,.20)';ctx.lineWidth=.75;
-ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.stroke()}
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const p=iso(x,y);const key=names[MAP[y][x]];drawTerrainTile(images[key],p,key);
+}
  // Town centers and their first buildings.
- for(const t of towns){const p=iso(t.x,t.y);ctx.fillStyle='rgba(43,105,111,.34)';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();diamond(p,'#d6ad55',3);ctx.fillStyle='#fff8df';ctx.strokeStyle='#382515';ctx.lineWidth=3;ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.strokeText(t.name,p.x,p.y-TILE_H/2-5);ctx.fillText(t.name,p.x,p.y-TILE_H/2-5);}
- for(const t of towns){for(const b of t.buildings){const p=iso(b.x,b.y);const key=b.mark==='K'?'kuplahalli':'lidl';const im=images[key];const maxW=68,maxH=58;const sc=Math.min(maxW/im.width,maxH/im.height);const w=im.width*sc,h=im.height*sc;const baseY=p.y+7;ctx.drawImage(im,p.x-w/2,baseY-h,w,h);ctx.fillStyle='#fff8df';ctx.strokeStyle='#382515';ctx.lineWidth=2;ctx.font='11px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.strokeText(b.name,p.x,baseY+18);ctx.fillText(b.name,p.x,baseY+18)}}
+ for(const t of towns){const p=iso(t.x,t.y);ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.fillStyle='#f5f5f5';ctx.strokeStyle='#222';ctx.lineWidth=3;ctx.font='bold 22px Arial';ctx.textAlign='center';ctx.textBaseline='middle';const mark=t.name==='Nikkilä'?'N':'S';ctx.strokeText(mark,p.x,p.y);ctx.fillText(mark,p.x,p.y);ctx.font='bold 15px Arial';ctx.textBaseline='bottom';ctx.strokeText(t.name,p.x,p.y-TILE_H/2-5);ctx.fillText(t.name,p.x,p.y-TILE_H/2-5);}
+ for(const t of towns){for(const b of t.buildings){const p=iso(b.x,b.y);ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();const key=b.mark==='K'?'kuplahalli':b.mark==='L'?'lidl':b.mark==='T'?'tokmanni':'kirjasto';const im=images[key];const maxW=68,maxH=58;const sc=Math.min(maxW/im.width,maxH/im.height);const w=im.width*sc,h=im.height*sc;const baseY=p.y+15;ctx.drawImage(im,p.x-w/2,baseY-h,w,h);ctx.fillStyle='#fff8df';ctx.strokeStyle='#382515';ctx.lineWidth=2;ctx.font='11px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.strokeText(b.name,p.x,baseY+18);ctx.fillText(b.name,p.x,baseY+18)}}
  const u=units[active];
- if(!busy){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const x=u.x+dx,y=u.y+dy;if(!inside(x,y)||MAP[y][x]===2)continue;const p=iso(x,y);ctx.globalAlpha=.22;ctx.fillStyle='#ffe36b';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.globalAlpha=1}}
- for(let i=0;i<units.length;i++){const a=units[i],p=iso(a.x,a.y);if(i===active){diamond(p,(Math.floor(performance.now()/450)%2?'#fff':'#ffe36b'),3)}const im=images.legioona;const sc=Math.min(34/im.width,58/im.height);const w=im.width*sc,h=im.height*sc;ctx.drawImage(im,p.x-w/2,p.y-h+8,w,h);ctx.fillStyle='#163e78';ctx.strokeStyle='#f4df9b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-h-4);ctx.lineTo(p.x+10,p.y-h+2);ctx.lineTo(p.x+10,p.y-h+19);ctx.lineTo(p.x,p.y-h+25);ctx.lineTo(p.x-10,p.y-h+19);ctx.lineTo(p.x-10,p.y-h+2);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),p.x,p.y-h+10)}
+ if(u && u.owner===activeOwner && !busy && u.move>0){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const x=u.x+dx,y=u.y+dy;if(!inside(x,y)||MAP[y][x]===2)continue;const p=iso(x,y);ctx.globalAlpha=.22;ctx.fillStyle='#ffe36b';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.globalAlpha=1}}
+ for(let i=0;i<units.length;i++){const a=units[i],p=iso(a.x,a.y);const isActive=i===active && a.owner===activeOwner;if(isActive && (performance.now()%1600)<800)diamond(p,'#ffe36b',3);const im=images[a.owner===0?'legioonaNikkila':'legioonaSoderkulla'];const sc=Math.min(51/im.width,87/im.height);const w=im.width*sc,h=im.height*sc;ctx.drawImage(im,p.x-w/2,p.y-h+16,w,h);ctx.globalAlpha=1;ctx.fillStyle='#163e78';ctx.strokeStyle='#f4df9b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-h+4);ctx.lineTo(p.x+10,p.y-h+6);ctx.lineTo(p.x+10,p.y-h+27);ctx.lineTo(p.x,p.y-h+33);ctx.lineTo(p.x-10,p.y-h+27);ctx.lineTo(p.x-10,p.y-h+6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),p.x,p.y-h+18)}
  ctx.restore()}
-function finish(){busy=true;draw();setTimeout(()=>{active++;if(active>=units.length){active=0;year-=STEP}busy=false;update();centerOn(units[active]);draw()},700)}
-function moveTo(x,y){if(busy)return;const a=units[active];if(!inside(x,y)||MAP[y][x]===2)return;if(Math.abs(x-a.x)>1||Math.abs(y-a.y)>1||(x===a.x&&y===a.y))return;a.x=x;a.y=y;finish()}
+function produceResources(){
+ for(const t of towns){
+   const st=states[t.name==='Nikkilä'?0:1];
+   for(const b of t.buildings){
+     if(b.name==='Lidl' || b.name==='Tokmanni') st.gold += 1;
+     else if(b.name==='Kirjasto') st.research += 1;
+     else if(b.name==='Kuplahalli') st.entertainment += 1;
+   }
+ }
+}
+function finish(){
+ busy=true;draw();
+ setTimeout(()=>{
+   const oldOwner=activeOwner;
+   activeOwner=1-activeOwner;
+   if(oldOwner===1){produceResources();year-=STEP;}
+   active=units.findIndex(u=>u.owner===activeOwner);
+   if(active!==-1) units[active].move=1;
+   busy=false;update();
+   if(active!==-1) centerOn(units[active]); else centerOnTown(activeOwner);
+   draw();
+ },700);
+}
+function battle(attackerIndex,defenderIndex){
+ const attacker=units[attackerIndex], defender=units[defenderIndex];
+ if(attacker.attack>defender.defense){
+   units.splice(defenderIndex,1);
+   return 'attacker';
+ }
+ units.splice(attackerIndex,1);
+ return 'defender';
+}
+function moveTo(x,y){
+ if(busy)return;const a=units[active];if(!a||a.owner!==activeOwner)return;
+ if(!inside(x,y)||MAP[y][x]===2)return;
+ if(Math.abs(x-a.x)>1||Math.abs(y-a.y)>1||(x===a.x&&y===a.y))return;
+ const targetIndex=units.findIndex((u,i)=>i!==active&&u.x===x&&u.y===y);
+ if(targetIndex!==-1){
+   a.move=0;
+   const result=battle(active,targetIndex);
+   if(result==='attacker'){
+     // Attacker survives and takes the defeated unit's square.
+     a.x=x;a.y=y;
+     // Its index may have shifted if the defeated unit was before it.
+     active=units.indexOf(a);
+   }else{
+     // Attacker was destroyed; choose the next surviving unit from the removed position.
+     if(units.length===0){busy=true;draw();setTimeout(()=>{busy=false;update();draw()},700);return;}
+     active=Math.min(active,units.length-1);
+   }
+   finish();return;
+ }
+ a.x=x;a.y=y;a.move=0;finish();
+}
+document.getElementById('endTurn').addEventListener('click',()=>{if(!busy)finish();});
+document.getElementById('buildButton').addEventListener('click',()=>{document.getElementById('buildOptions').style.display='block';});
+document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}});
 let pointerStartX=0,pointerStartY=0,pointerStartCamX=0,pointerStartCamY=0,pointerMoved=false;
 canvas.addEventListener('pointerdown',e=>{
   if(busy)return;
@@ -77,14 +165,19 @@ canvas.addEventListener('pointerup',e=>{
   // Town selection always wins over unit movement.
   for(const town of towns){
     if(t.x===town.x&&t.y===town.y){
+      buildMode=null; buildTown=town;
+      const isOwnTown=activeOwner===(town.name==='Nikkilä'?0:1);
       document.getElementById('townName').textContent=town.name;
       document.getElementById('buildings').innerHTML='<p><strong>Rakennukset</strong></p>'+town.buildings.map(b=>'<p style="margin:5px 0">'+b.name+'</p>').join('');
+      document.getElementById('buildOptions').style.display='none';
+      document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto</button> <button id="buildTokmanni">Tokmanni</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
       document.getElementById('town').style.display='block';
       return;
     }
   }
+  if((buildMode==='kirjasto'||buildMode==='tokmanni') && buildTown){const dx=t.x-buildTown.x,dy=t.y-buildTown.y;if(Math.max(Math.abs(dx),Math.abs(dy))<=2 && !(dx===0&&dy===0) && inside(t.x,t.y) && MAP[t.y][t.x]!==2 && !towns.some(tt=>tt.buildings.some(b=>b.x===t.x&&b.y===t.y))){buildTown.buildings.push({name:buildMode==='tokmanni'?'Tokmanni':'Kirjasto',mark:buildMode==='tokmanni'?'T':'B',x:t.x,y:t.y});buildMode=null;buildTown=null;document.getElementById('info').textContent='Klikkaa viereistä ruutua siirtääksesi aktiivista legioonaa.';draw();return;}return;}
   moveTo(t.x,t.y);
 });
-addEventListener('keydown',e=>{if(busy)return;const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(m){e.preventDefault();const a=units[active];moveTo(a.x+m[0],a.y+m[1])}});
+addEventListener('keydown',e=>{if(busy)return;const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(m){e.preventDefault();const a=units[active];if(a&&a.owner===activeOwner)moveTo(a.x+m[0],a.y+m[1])}});
 function loop(){draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 </script></body></html>
