@@ -90,11 +90,19 @@ function finish(){
    activeOwner=1-activeOwner;
    if(oldOwner===1){produceResources();year-=STEP;}
    units.forEach(u=>{if(u.owner===activeOwner)u.move=u.maxMove||1;});
-   active=units.findIndex(u=>u.owner===activeOwner);
+   active=units.findIndex(u=>u.owner===activeOwner && u.move>0);
    busy=false;update();
    if(active!==-1) centerOn(units[active]); else centerOnTown(activeOwner);
    draw();
  },700);
+}
+function continueOwnerTurn(){
+ const next=units.findIndex(u=>u.owner===activeOwner && u.move>0);
+ if(next!==-1){
+   active=next;update();draw();
+ }else{
+   finish();
+ }
 }
 function battle(attackerIndex,defenderIndex){
  const attacker=units[attackerIndex], defender=units[defenderIndex];
@@ -123,14 +131,14 @@ function moveTo(x,y){
      a.x=x;a.y=y;
      active=units.indexOf(a);
    }else if(result==='defender_destroyed_attacker'){
-     const next=units.findIndex(u=>u.owner===activeOwner);
+     const next=units.findIndex(u=>u.owner===activeOwner && u.move>0);
      active=next;
    }else{
      active=units.indexOf(a);
    }
-   finish();return;
+   continueOwnerTurn();return;
  }
- a.x=x;a.y=y;a.move=0;finish();
+ a.x=x;a.y=y;a.move=0;continueOwnerTurn();
 }
 document.getElementById('endTurn').addEventListener('click',()=>{if(!busy)finish();});
 document.getElementById('buildButton').addEventListener('click',()=>{document.getElementById('buildOptions').style.display='block';});
