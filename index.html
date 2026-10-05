@@ -58,8 +58,8 @@ function update(){
 }
 function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
 function drawTerrainTile(im,p,key){
-  // Land assets are normalized to the same 88x44 diamond footprint as water.
-  // Draw them directly so adjacent tiles share the exact same geometry.
+  // Terrain assets are already normalized to the exact 88x44 isometric tile.
+  // Draw them directly so adjacent land tiles meet without an artificial seam.
   ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
 }
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
