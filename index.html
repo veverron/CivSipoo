@@ -58,20 +58,9 @@ function update(){
 }
 function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
 function drawTerrainTile(im,p,key){
-  if(key==='vesi'){ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);return;}
-  // Draw only the top face of the source tile, clipped to the map diamond.
-  // This removes the dark slab edges between adjacent terrain tiles.
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-TILE_H/2);
-  ctx.lineTo(p.x+TILE_W/2,p.y);
-  ctx.lineTo(p.x,p.y+TILE_H/2);
-  ctx.lineTo(p.x-TILE_W/2,p.y);
-  ctx.closePath();
-  ctx.clip();
-  const srcW=im.width-10, srcH=Math.floor(im.height*0.64), srcX=5, srcY=Math.floor(im.height*0.16);
-  ctx.drawImage(im,srcX,srcY,srcW,srcH,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
-  ctx.restore();
+  // Land assets are normalized to the same 88x44 diamond footprint as water.
+  // Draw them directly so adjacent tiles share the exact same geometry.
+  ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
 }
 function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
  const names=['pelto','metsa','vesi'];
