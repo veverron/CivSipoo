@@ -89,8 +89,8 @@ function finish(){
    const oldOwner=activeOwner;
    activeOwner=1-activeOwner;
    if(oldOwner===1){produceResources();year-=STEP;}
+   units.forEach(u=>{if(u.owner===activeOwner)u.move=u.maxMove||1;});
    active=units.findIndex(u=>u.owner===activeOwner);
-   if(active!==-1) units[active].move=units[active].maxMove||1;
    busy=false;update();
    if(active!==-1) centerOn(units[active]); else centerOnTown(activeOwner);
    draw();
