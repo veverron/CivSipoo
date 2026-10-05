@@ -9,7 +9,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101010}bod
 #info{position:fixed;z-index:3;left:8px;top:70px;background:#000c;color:#fff;padding:7px 10px;font-size:13px;pointer-events:none}
 #resources{position:fixed;z-index:4;right:12px;top:70px;background:#17130dcc;color:#f4ead0;border:1px solid #9c783e;border-radius:5px;padding:8px 11px;font-family:Georgia,serif;font-size:14px;line-height:1.55;box-shadow:0 2px 10px #0008}#resources b{color:#e7d09a}
 #town{display:none;position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);background:#f4ead0;color:#211b12;border:3px solid #5b4428;border-radius:6px;min-width:230px;padding:14px;box-shadow:0 8px 30px #0008}#town h2{margin:0 0 8px;font-size:21px}#town p{margin:5px 0 12px}#town button{padding:8px 12px;font-weight:bold}
-</style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Liikuta valittua yksikkö vasemmalla napilla. Valitse yksikkö tai taajama oikealla napilla.</div><div id="resources"><b id="stateLabel">Vuoro: Nikkilä</b><br>🪙 Kulta: <span id="goldValue">1</span><br>🔨 Työ: <span id="workValue">0</span><br>🎭 Viihde: <span id="entertainmentValue">0</span><br>⚗️ Tutkimus: <span id="researchValue">0</span><hr style="border:0;border-top:1px solid #9c783e;margin:7px 0"><b>Legioona <span id="unitNumber">1</span></b><br>Liike: <span id="moveValue">1</span><br>Hyökkäys: <span id="attackValue">2</span><br>Puolustus: <span id="defenseValue">1</span><br><button id="endTurn" style="margin-top:8px;padding:5px 8px;font-weight:bold">Lopeta vuoro</button></div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><div id="buildMenu" style="margin:10px 0 12px"><button id="buildButton">Rakenna</button><div id="buildOptions" style="display:none;margin-top:8px"></div></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
+</style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Liikuta valittua yksikkö vasemmalla napilla. Valitse yksikkö tai taajama oikealla napilla.</div><div id="resources"><b id="stateLabel">Vuoro: Nikkilä</b><br>🪙 Kulta: <span id="goldValue">1</span><br>🔨 Työ: <span id="workValue">0</span><br>🎭 Viihde: <span id="entertainmentValue">0</span><br>⚗️ Tutkimus: <span id="researchValue">0</span><hr style="border:0;border-top:1px solid #9c783e;margin:7px 0"><b>HP <span id="unitNumber">4</span></b><br>Liike: <span id="moveValue">1</span><br>Hyökkäys: <span id="attackValue">2</span><br>Puolustus: <span id="defenseValue">1</span><br><button id="endTurn" style="margin-top:8px;padding:5px 8px;font-weight:bold">Lopeta vuoro</button></div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><div id="buildMenu" style="margin:10px 0 12px"><button id="buildButton">Rakenna</button><div id="buildOptions" style="display:none;margin-top:8px"></div></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
@@ -30,7 +30,7 @@ for(let x=0;x<COLS;x++){MAP[0][x]=2;MAP[ROWS-1][x]=2;}
 const towns=[{name:'Nikkilä',x:21,y:9,buildings:[{name:'Kuplahalli',mark:'K',x:22,y:9}]},{name:'Söderkulla',x:9,y:16,buildings:[{name:'Lidl',mark:'L',x:10,y:16}]}];
 let buildMode=null,buildTown=null;
 for(const t of towns){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
-const units=[{x:21,y:9,owner:0,move:1,attack:2,defense:1},{x:9,y:16,owner:1,move:1,attack:2,defense:1}];
+const units=[{x:21,y:9,owner:0,move:1,attack:2,defense:1,hp:4},{x:9,y:16,owner:1,move:1,attack:2,defense:1,hp:4}];
 const states=[{name:'Nikkilä',gold:1,work:10,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:10,entertainment:0,research:0}];
 let activeOwner=0,active=0,year=4000,busy=false;
 let camX=0,camY=0,drag=false,sx=0,sy=0,cx=0,cy=0;
@@ -50,7 +50,7 @@ function update(){
  document.getElementById('workValue').textContent=st.work;
  document.getElementById('entertainmentValue').textContent=st.entertainment;
  document.getElementById('researchValue').textContent=st.research;
- document.getElementById('unitNumber').textContent=u&&u.owner===activeOwner?units.indexOf(u)+1:'—';
+ document.getElementById('unitNumber').textContent=u&&u.owner===activeOwner?u.hp:'—';
  document.getElementById('moveValue').textContent=u&&u.owner===activeOwner?u.move:'—';
  document.getElementById('attackValue').textContent=u&&u.owner===activeOwner?u.attack:'—';
  document.getElementById('defenseValue').textContent=u&&u.owner===activeOwner?u.defense:'—';
@@ -71,7 +71,7 @@ function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.transla
  for(const t of towns){for(const b of t.buildings){const p=iso(b.x,b.y);ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();const key=b.mark==='K'?'kuplahalli':b.mark==='L'?'lidl':b.mark==='T'?'tokmanni':'kirjasto';const im=images[key];const maxW=68,maxH=58;const sc=Math.min(maxW/im.width,maxH/im.height);const w=im.width*sc,h=im.height*sc;const baseY=p.y+15;ctx.drawImage(im,p.x-w/2,baseY-h,w,h);ctx.fillStyle='#fff8df';ctx.strokeStyle='#382515';ctx.lineWidth=2;ctx.font='11px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.strokeText(b.name,p.x,baseY+18);ctx.fillText(b.name,p.x,baseY+18)}}
  const u=units[active];
  if(u && u.owner===activeOwner && !busy && u.move>0){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const x=u.x+dx,y=u.y+dy;if(!inside(x,y)||MAP[y][x]===2)continue;const p=iso(x,y);ctx.globalAlpha=.22;ctx.fillStyle='#ffe36b';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.globalAlpha=1}}
- for(let i=0;i<units.length;i++){const a=units[i],p=iso(a.x,a.y);const isActive=i===active && a.owner===activeOwner;if(isActive && (performance.now()%1600)<800)diamond(p,'#ffe36b',3);const im=images[a.owner===0?'legioonaNikkila':'legioonaSoderkulla'];const sc=Math.min(51/im.width,87/im.height);const w=im.width*sc,h=im.height*sc;ctx.drawImage(im,p.x-w/2,p.y-h+16,w,h);ctx.globalAlpha=1;ctx.fillStyle='#163e78';ctx.strokeStyle='#f4df9b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-h+4);ctx.lineTo(p.x+10,p.y-h+6);ctx.lineTo(p.x+10,p.y-h+27);ctx.lineTo(p.x,p.y-h+33);ctx.lineTo(p.x-10,p.y-h+27);ctx.lineTo(p.x-10,p.y-h+6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),p.x,p.y-h+18)}
+ for(let i=0;i<units.length;i++){const a=units[i],p=iso(a.x,a.y);const isActive=i===active && a.owner===activeOwner;if(isActive && (performance.now()%1600)<800)diamond(p,'#ffe36b',3);const im=images[a.owner===0?'legioonaNikkila':'legioonaSoderkulla'];const sc=Math.min(51/im.width,87/im.height);const w=im.width*sc,h=im.height*sc;ctx.drawImage(im,p.x-w/2,p.y-h+16,w,h);ctx.globalAlpha=1;ctx.fillStyle='#163e78';ctx.strokeStyle='#f4df9b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-h+4);ctx.lineTo(p.x+10,p.y-h+6);ctx.lineTo(p.x+10,p.y-h+27);ctx.lineTo(p.x,p.y-h+33);ctx.lineTo(p.x-10,p.y-h+27);ctx.lineTo(p.x-10,p.y-h+6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(a.hp),p.x,p.y-h+18)}
  ctx.restore()}
 function produceResources(){
  for(const t of towns){
@@ -98,12 +98,18 @@ function finish(){
 }
 function battle(attackerIndex,defenderIndex){
  const attacker=units[attackerIndex], defender=units[defenderIndex];
- if(attacker.attack>defender.defense){
-   units.splice(defenderIndex,1);
-   return 'attacker';
+ const roll=Math.random();
+ if(roll<0.50){
+   defender.hp-=attacker.attack;
+   if(defender.hp<=0){units.splice(defenderIndex,1);return 'attacker_destroyed_defender';}
+   return 'attacker_wins';
  }
- units.splice(attackerIndex,1);
- return 'defender';
+ if(roll<0.75){
+   attacker.hp-=defender.defense;
+   if(attacker.hp<=0){units.splice(attackerIndex,1);return 'defender_destroyed_attacker';}
+   return 'defender_wins';
+ }
+ return 'draw';
 }
 function moveTo(x,y){
  if(busy)return;const a=units[active];if(!a||a.owner!==activeOwner)return;
@@ -113,15 +119,14 @@ function moveTo(x,y){
  if(targetIndex!==-1){
    a.move=0;
    const result=battle(active,targetIndex);
-   if(result==='attacker'){
-     // Attacker survives and takes the defeated unit's square.
+   if(result==='attacker_destroyed_defender'){
      a.x=x;a.y=y;
-     // Its index may have shifted if the defeated unit was before it.
      active=units.indexOf(a);
+   }else if(result==='defender_destroyed_attacker'){
+     const next=units.findIndex(u=>u.owner===activeOwner);
+     active=next;
    }else{
-     // Attacker was destroyed; choose the next surviving unit from the removed position.
-     if(units.length===0){busy=true;draw();setTimeout(()=>{busy=false;update();draw()},700);return;}
-     active=Math.min(active,units.length-1);
+     active=units.indexOf(a);
    }
    finish();return;
  }
@@ -129,7 +134,7 @@ function moveTo(x,y){
 }
 document.getElementById('endTurn').addEventListener('click',()=>{if(!busy)finish();});
 document.getElementById('buildButton').addEventListener('click',()=>{document.getElementById('buildOptions').style.display='block';});
-document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){if(states[activeOwner].work<2){document.getElementById('info').textContent='Rakentaminen vaatii 2 vasaraa.';return;}buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){if(states[activeOwner].work<3){document.getElementById('info').textContent='Rakentaminen vaatii 3 vasaraa.';return;}buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildLegion'){const owner=activeOwner,st=states[owner],town=buildTown;const occupied=units.some(u=>u.x===town.x&&u.y===town.y);if(st.gold>=3&&st.entertainment>=3&&!occupied){st.gold-=3;st.entertainment-=3;units.push({x:town.x,y:town.y,owner,move:1,attack:2,defense:1});active=units.length-1;document.getElementById('town').style.display='none';document.getElementById('info').textContent='Legioona rakennettu.';update();draw();}else if(occupied){document.getElementById('info').textContent='Taajaman keskuksessa on jo yksikkö.';}else{document.getElementById('info').textContent='Legioonan rakentaminen vaatii 3 kultaa ja 3 viihdettä.';} }});
+document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){if(states[activeOwner].work<2){document.getElementById('info').textContent='Rakentaminen vaatii 2 vasaraa.';return;}buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){if(states[activeOwner].work<3){document.getElementById('info').textContent='Rakentaminen vaatii 3 vasaraa.';return;}buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildLegion'){const owner=activeOwner,st=states[owner],town=buildTown;const occupied=units.some(u=>u.x===town.x&&u.y===town.y);if(st.gold>=3&&st.entertainment>=3&&!occupied){st.gold-=3;st.entertainment-=3;units.push({x:town.x,y:town.y,owner,move:1,attack:2,defense:1,hp:4});active=units.length-1;document.getElementById('town').style.display='none';document.getElementById('info').textContent='Legioona rakennettu.';update();draw();}else if(occupied){document.getElementById('info').textContent='Taajaman keskuksessa on jo yksikkö.';}else{document.getElementById('info').textContent='Legioonan rakentaminen vaatii 3 kultaa ja 3 viihdettä.';} }});
 let pointerStartX=0,pointerStartY=0,pointerStartCamX=0,pointerStartCamY=0,pointerMoved=false;
 canvas.addEventListener('pointerdown',e=>{
   if(busy)return;
