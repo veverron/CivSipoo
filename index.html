@@ -34,7 +34,7 @@ const units=[{x:21,y:9,owner:0,move:1,maxMove:1,attack:2,defense:1,hp:4},{x:9,y:
 const states=[{name:'Nikkilä',gold:1,work:10,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:10,entertainment:0,research:0}];
 let activeOwner=0,active=0,year=4000,busy=false;
 let camX=0,camY=0,drag=false,sx=0,sy=0,cx=0,cy=0;
-function resize(){const d=Math.max(4,devicePixelRatio||1);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';draw()}
+function resize(){const d=Math.max(2,devicePixelRatio||1);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';draw()}
 addEventListener('resize',resize);
 function iso(x,y){return{x:ORIGIN_X+(x-y)*TILE_W/2,y:ORIGIN_Y+(x+y)*TILE_H/2}}
 function fromIso(px,py){const a=(px+camX-ORIGIN_X)/(TILE_W/2),b=(py+camY-ORIGIN_Y)/(TILE_H/2);return{x:Math.round((a+b)/2),y:Math.round((b-a)/2)}}
