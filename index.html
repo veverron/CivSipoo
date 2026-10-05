@@ -12,7 +12,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101010}bod
 </style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Klikkaa viereistä ruutua siirtääksesi aktiivista legioonaa.</div><div id="resources"><b id="stateLabel">Vuoro: Nikkilä</b><br>🪙 Kulta: <span id="goldValue">1</span><br>🔨 Työ: <span id="workValue">0</span><br>🎭 Viihde: <span id="entertainmentValue">0</span><br>⚗️ Tutkimus: <span id="researchValue">0</span><hr style="border:0;border-top:1px solid #9c783e;margin:7px 0"><b>Legioona <span id="unitNumber">1</span></b><br>Liike: <span id="moveValue">1</span><br>Hyökkäys: <span id="attackValue">2</span><br>Puolustus: <span id="defenseValue">1</span><br><button id="endTurn" style="margin-top:8px;padding:5px 8px;font-weight:bold">Lopeta vuoro</button></div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><div id="buildMenu" style="margin:10px 0 12px"><button id="buildButton">Rakenna rakennus</button><div id="buildOptions" style="display:none;margin-top:8px"></div></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
 <script>
 'use strict';
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
 const town=document.getElementById('town');
 document.getElementById('closeTown').addEventListener('click',()=>{town.style.display='none';});
 const COLS=30,ROWS=24,TILE_W=88,TILE_H=44,ORIGIN_X=COLS*TILE_W/2,ORIGIN_Y=60,STEP=20;
@@ -34,7 +34,7 @@ const units=[{x:17,y:10,owner:0,move:1,attack:2,defense:1},{x:12,y:14,owner:1,mo
 const states=[{name:'Nikkilä',gold:1,work:0,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:1,entertainment:0,research:0}];
 let activeOwner=0,active=0,year=4000,busy=false;
 let camX=0,camY=0,drag=false,sx=0,sy=0,cx=0,cy=0;
-function resize(){const d=devicePixelRatio||1;canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
+function resize(){const d=Math.max(2,devicePixelRatio||1);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';draw()}
 addEventListener('resize',resize);
 function iso(x,y){return{x:ORIGIN_X+(x-y)*TILE_W/2,y:ORIGIN_Y+(x+y)*TILE_H/2}}
 function fromIso(px,py){const a=(px+camX-ORIGIN_X)/(TILE_W/2),b=(py+camY-ORIGIN_Y)/(TILE_H/2);return{x:Math.round((a+b)/2),y:Math.round((b-a)/2)}}
