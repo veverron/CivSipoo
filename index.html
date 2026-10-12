@@ -1,196 +1,1441 @@
 <!doctype html>
-<html lang="fi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Civilization Sipoo</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101010}body{touch-action:none;font-family:Arial,sans-serif}canvas{display:block;width:100%;height:100%;image-rendering:auto;touch-action:none}
-#topbar{position:fixed;z-index:4;left:0;right:0;top:0;height:58px;display:flex;align-items:center;justify-content:center;background:linear-gradient(#17130d,#080705);border-bottom:2px solid #b18a45;box-shadow:0 2px 12px #000b;pointer-events:none}
-#brand{font-family:Georgia,serif;font-size:25px;letter-spacing:4px;color:#e7d09a;text-shadow:0 2px 2px #000;font-weight:bold}
-#year{position:absolute;right:16px;top:12px;background:#17130d;color:#e7d09a;border:1px solid #9c783e;border-radius:5px;padding:7px 13px;font-family:Georgia,serif;font-weight:bold;font-size:16px;letter-spacing:.5px}
-#info{position:fixed;z-index:3;left:8px;top:70px;background:#000c;color:#fff;padding:7px 10px;font-size:13px;pointer-events:none}
-#resources{position:fixed;z-index:4;right:12px;top:70px;background:#17130dcc;color:#f4ead0;border:1px solid #9c783e;border-radius:5px;padding:8px 11px;font-family:Georgia,serif;font-size:14px;line-height:1.55;box-shadow:0 2px 10px #0008}#resources b{color:#e7d09a}
-#town{display:none;position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);background:#f4ead0;color:#211b12;border:3px solid #5b4428;border-radius:6px;min-width:230px;padding:14px;box-shadow:0 8px 30px #0008}#town h2{margin:0 0 8px;font-size:21px}#town p{margin:5px 0 12px}#town button{padding:8px 12px;font-weight:bold}
-</style></head><body><div id="topbar"><div id="brand">CIVILIZATION SIPOO</div><div id="year">4000 eKr.</div></div><div id="info">Liikuta valittua yksikkö vasemmalla napilla. Valitse yksikkö tai taajama oikealla napilla.</div><div id="resources"><b id="stateLabel">Vuoro: Nikkilä</b><br>🪙 Kulta: <span id="goldValue">1</span><br>🔨 Työ: <span id="workValue">0</span><br>🎭 Viihde: <span id="entertainmentValue">0</span><br>⚗️ Tutkimus: <span id="researchValue">0</span><hr style="border:0;border-top:1px solid #9c783e;margin:7px 0"><b id="unitName">—</b><br><b>HP <span id="unitNumber">4</span></b><br>Liike: <span id="moveValue">1</span><br>Hyökkäys: <span id="attackValue">2</span><br>Puolustus: <span id="defenseValue">1</span><br><button id="endTurn" style="margin-top:8px;padding:5px 8px;font-weight:bold">Lopeta vuoro</button></div><div id="town"><h2 id="townName"></h2><p>Taajaman keskus</p><div id="buildings"></div><div id="buildMenu" style="margin:10px 0 12px"><button id="buildButton">Rakenna</button><div id="buildOptions" style="display:none;margin-top:8px"></div></div><button id="closeTown">Sulje</button></div><canvas id="game"></canvas>
+:root{--gold:#e7d09a;--edge:#9c783e;--panel:#17130de6;--ink:#f4ead0}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0a08;color:var(--ink);font-family:Georgia,'Times New Roman',serif}
+body{touch-action:none;-webkit-user-select:none;user-select:none}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+button,input{font-family:inherit}
+button{cursor:pointer;border-radius:6px;border:1px solid var(--edge);background:linear-gradient(#3a2e1c,#211a10);color:var(--ink);padding:8px 12px;font-size:14px;font-weight:bold}
+button:hover:not(:disabled){filter:brightness(1.25)}
+button:disabled{opacity:.42;cursor:default}
+.hidden{display:none!important}
+#top{position:fixed;z-index:5;left:0;right:0;top:0;height:50px;display:flex;align-items:center;gap:12px;padding:0 12px;background:linear-gradient(#1d170e,#0a0806);border-bottom:2px solid #b18a45;box-shadow:0 2px 12px #000b}
+#brand{font-size:19px;letter-spacing:3px;color:var(--gold);font-weight:bold;white-space:nowrap}
+#player{display:flex;align-items:center;gap:7px;font-weight:bold;font-size:15px;white-space:nowrap}
+#player i{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid #f4df9b}
+#res{display:flex;gap:11px;margin-left:auto;font-size:15px;white-space:nowrap}
+#res span small{color:#b9d98a;font-size:12px;margin-left:2px}
+#res span small.neg{color:#ff9b8a}
+#year{border:1px solid var(--edge);border-radius:5px;padding:5px 10px;color:var(--gold);font-weight:bold;white-space:nowrap}
+#research{position:fixed;z-index:4;top:58px;right:10px;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:5px 10px;font-size:13px;max-width:240px;cursor:pointer}
+#research .bar{height:5px;background:#000a;border-radius:3px;margin-top:4px;overflow:hidden}
+#research .bar i{display:block;height:100%;background:#7fc4ff}
+#research.pulse{animation:pulse 1.2s infinite}
+#bottom{position:fixed;z-index:5;left:10px;right:10px;bottom:10px;display:flex;gap:10px;align-items:flex-end;pointer-events:none}
+#unitCard{pointer-events:auto;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:9px 11px;display:flex;gap:10px;align-items:center;max-width:470px;box-shadow:0 2px 12px #0009}
+#unitCard img{width:52px;height:60px;object-fit:contain}
+#unitCard .nm{font-weight:bold;color:var(--gold);font-size:16px}
+#unitCard .st{font-size:13px;line-height:1.45}
+#unitCard .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+#unitCard .acts button{padding:5px 9px;font-size:13px}
+#tileInfo{pointer-events:none;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:7px 10px;font-size:13px;max-width:280px}
+#rightBtns{margin-left:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:auto}
+#zoomBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#zoomBtns button{min-width:40px;height:40px;padding:0 8px;font-size:18px}
+#endTurn{font-size:17px;padding:12px 18px;background:linear-gradient(#6b4d1e,#3b2a10)}
+#endTurn.pulse,#bTech.pulse{animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 4px #e7d09a88}}
+#toasts{position:fixed;z-index:6;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(92vw,520px)}
+.toast{background:#000d;border:1px solid var(--edge);border-radius:6px;padding:7px 12px;font-size:14px;text-align:center;animation:fade 4.2s forwards}
+@keyframes fade{0%{opacity:0;transform:translateY(-6px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+#placeBar{position:fixed;z-index:6;top:62px;left:50%;transform:translateX(-50%);background:#123d1bee;border:1px solid #7fd08a;border-radius:8px;padding:8px 12px;display:flex;gap:10px;align-items:center;font-size:14px;max-width:94vw}
+.modal{position:fixed;z-index:10;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:14px}
+.box{background:#f4ead0;color:#211b12;border:3px solid #5b4428;border-radius:8px;padding:16px 18px;box-shadow:0 8px 30px #000a;width:min(520px,100%);max-height:88vh;overflow:auto}
+.box h2{margin:0 0 4px;font-size:24px}
+.box h3{margin:14px 0 6px;font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#5b4428}
+.box .row{display:flex;align-items:center;gap:10px;margin:6px 0}
+.box .row img{width:56px;height:40px;object-fit:contain}
+.box .row .grow{flex:1;font-size:14px;line-height:1.35}
+.box button{background:linear-gradient(#4a3a22,#2d2213)}
+.box .muted{color:#6b5a40;font-size:13px}
+.box input[type=text]{border:1px solid #8a6a3a;border-radius:4px;padding:4px 6px;font-size:13px;width:100%;margin-top:3px;background:#fffaf0;color:#211b12}
+.tech{display:flex;gap:8px;align-items:center;margin:5px 0;padding:6px 8px;border-radius:6px;background:#e6d9b8;font-size:13px;line-height:1.3}
+.tech.done{background:#cfe3b4}.tech.cur{background:#bcd8f5;outline:2px solid #3b7cc4}.tech.lock{opacity:.5}
+.tech .grow{flex:1}.tech button{padding:4px 9px;font-size:12px}
+.pbar{height:8px;background:#0003;border-radius:4px;overflow:hidden;margin-top:4px}.pbar i{display:block;height:100%;background:#4a8a3a}
+.path{border:1px solid #8a6a3a;border-radius:6px;padding:8px 10px;margin:8px 0;background:#efe3c3;font-size:13px;line-height:1.4}
+.path.mine{outline:2px solid #4a8a3a}
+#menu{background:radial-gradient(ellipse at center,#2a2114 0%,#0b0907 75%)}
+#menu .inner{text-align:center;max-width:440px}
+#menu h1{font-size:clamp(30px,8vw,52px);letter-spacing:5px;color:var(--gold);margin:0;text-shadow:0 3px 3px #000}
+#menu p{color:#cdbb92;margin:8px 0 26px}
+#menu button{display:block;width:100%;margin:10px 0;padding:13px;font-size:17px}
+#cover{background:#0b0a08;z-index:20}
+#cover .inner{text-align:center}#cover h1{color:var(--gold);font-size:34px;margin:0 0 18px}#cover button{padding:14px 26px;font-size:18px}
+@media (max-width:700px){#brand{display:none}#res{gap:7px;font-size:13px}#top{gap:7px;padding:0 8px}#year{padding:4px 6px;font-size:12px}#player{font-size:12px}#pName{max-width:70px;overflow:hidden;text-overflow:ellipsis}#tileInfo{display:none}#unitCard{max-width:none;flex:1}#endTurn{font-size:15px;padding:10px 12px}#research{max-width:170px;font-size:12px}#unitCard img{width:40px;height:48px}#unitCard .acts button{padding:4px 7px;font-size:12px}#unitCard .st{font-size:12px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="top">
+  <div id="brand">CIVILIZATION SIPOO</div>
+  <div id="player"><i id="pDot"></i><span id="pName">Nikkilä</span></div>
+  <div id="res">
+    <span title="Kulta">🪙 <b id="rGold">0</b><small id="iGold"></small></span>
+    <span title="Työ">🔨 <b id="rWork">0</b><small id="iWork"></small></span>
+    <span title="Viihde">🎭 <b id="rFun">0</b><small id="iFun"></small></span>
+    <span title="Tutkimus">📜 <b id="rSci">0</b><small id="iSci"></small></span>
+  </div>
+  <div id="year">4000 eKr.</div>
+</div>
+<div id="research" class="hidden"></div>
+<div id="toasts"></div>
+<div id="placeBar" class="hidden"><span id="placeText"></span><button id="placeCancel">Peru</button></div>
+
+<div id="bottom">
+  <div id="unitCard" class="hidden">
+    <img id="uImg" alt="">
+    <div>
+      <div class="nm" id="uName"></div>
+      <div class="st" id="uStats"></div>
+      <div class="acts">
+        <button id="aFound" class="hidden">🏘️ Perusta taajama</button>
+        <button id="aTown" class="hidden">🏛️ Taajama</button>
+        <button id="aSkip">Ohita</button>
+        <button id="aNext">Seuraava ▸</button>
+      </div>
+    </div>
+  </div>
+  <div id="tileInfo" class="hidden"></div>
+  <div id="rightBtns">
+    <div id="zoomBtns"><button id="bTech" title="Tutkimus">🔬</button><button id="bWin" title="Voittopolut">🏆</button><button id="zIn">+</button><button id="zOut">−</button><button id="help">?</button></div>
+    <button id="endTurn">Lopeta vuoro</button>
+  </div>
+</div>
+
+<div id="townModal" class="modal hidden"><div class="box" id="townBox"></div></div>
+<div id="techModal" class="modal hidden"><div class="box" id="techBox"></div></div>
+<div id="winModal" class="modal hidden"><div class="box" id="winBox"></div></div>
+<div id="helpModal" class="modal hidden"><div class="box">
+  <h2>Pelin säännöt</h2>
+  <h3>Voitto</h3><p>Täytä <b>kaksi kolmesta</b> voittopolusta: 🏙️ <b>Metropoli</b> (Metroasema, Stadion ja Lentokenttä samassa taajamassa), 🕳️ <b>Lemminkäisen luola</b> tai 🏖️ <b>Sipoonranta</b>. Suurprojektit ovat ainutlaatuisia: kun yksi saa projektin valmiiksi, toinen ei voi enää rakentaa sitä. Varavoitto: vastustajan kaikkien taajamien valloitus.</p>
+  <h3>Ohjaus</h3><p>Napauta omaa yksikköä valitaksesi sen. Keltaiset ruudut näyttävät, minne se pääsee, punaiset kohteet, joihin voi hyökätä. Napauta omaa taajamaa avataksesi sen. Raahaa liikuttaaksesi karttaa, rulla tai nipistys zoomaa. Näppäimet: Enter = lopeta vuoro, N = seuraava yksikkö, välilyönti = ohita.</p>
+  <h3>Sotasumu</h3><p>Näet vain sen, minkä omat yksiköt, taajamat ja Ennustuskeskukset näkevät. Tutkimaton alue on musta. Suurprojektien työmaat näkyvät kaikille.</p>
+  <h3>Talous</h3><p>Taajaman keskus tuottaa +1 🪙 +1 🔨 +1 📜. Taajaman alueella metsä antaa +1 🔨, pelto +1 🪙 ja kanervikko +1 🎭. Rakennus korvaa ruutunsa tuoton. Kahden rakennuksen jälkeen alue kasvaa. Tutkimus 🔬 etenee 📜-pisteillä, yksi teknologia kerrallaan.</p>
+  <h3>Suurprojektit</h3><p>Avautuvat teknologialla. Valitse 🏆-valikosta, perusta työmaa vihreälle paikalle (oman taajaman lähelle, luola metsän viereen, Sipoonranta rannalle) ja resurssit kuluvat joka vuoro automaattisesti. Talkoolainen työmaalla nopeuttaa 50 %. Vihollisen yksikkö työmaalla valtaa sen!</p>
+  <h3>Yksiköt</h3><p><b>Legioona</b> on perusyksikkö. <b>Talkoolainen</b> ei taistele: se tekee töitä ruudulla ja perustaa taajamia (vihollinen voi kaapata sen). <b>Hirvimies</b> ampuu 2 ruudun päähän ilman vastaiskua ja liikkuu metsässä vapaasti. <b>Kaivinkone</b> on hidas, mutta tuplaa hyökkäyksen taajamia ja työmaita vastaan. Legioona ja Kaivinkone maksavat ylläpitoa 1 🪙/vuoro.</p>
+  <h3>Taistelu</h3><p>Hyökkäys vs. puolustus, kolme kierrosta. Metsä ja taajama antavat puolustajalle +1. Paikallaan olevat yksiköt paranevat.</p>
+  <p style="text-align:right"><button id="helpClose">Selvä</button></p>
+</div></div>
+
+<div id="menu" class="modal"><div class="inner">
+  <h1>CIVILIZATION<br>SIPOO</h1>
+  <p>4000 eKr. Nikkilä ja Söderkulla kilpailevat Sipoon herruudesta.</p>
+  <button id="mAI">Pelaa tekoälyä vastaan</button>
+  <button id="mHot">Kaksinpeli samalla laitteella</button>
+  <button id="mLoad" class="hidden">Jatka tallennettua peliä</button>
+  <button id="mHelp">Säännöt</button>
+</div></div>
+<div id="cover" class="modal hidden"><div class="inner"><h1 id="coverText"></h1><button id="coverBtn">Aloita vuoro</button></div></div>
+<div id="overModal" class="modal hidden"><div class="box" style="text-align:center">
+  <h2 id="overTitle"></h2><p id="overText"></p><button id="overNew">Uusi peli</button>
+</div></div>
+
 <script>
 'use strict';
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-const town=document.getElementById('town');
-document.getElementById('closeTown').addEventListener('click',()=>{town.style.display='none';});
-const COLS=30,ROWS=24,TILE_W=88,TILE_H=44,ORIGIN_X=COLS*TILE_W/2,ORIGIN_Y=60,STEP=20;
-const images={};
-const files={aro:'assets/aro.png',metsa:'assets/metsa.png',vesi:'assets/vesi.png',legioona:'assets/legioona.png',legioonaNikkila:'assets/legioona_nikkila.png',legioonaSoderkulla:'assets/legioona_soderkulla.png',tiedustelijaNikkila:'assets/tiedustelija_nikkila.png',tiedustelijaSoderkulla:'assets/tiedustelija_soderkulla.png',kuplahalli:'assets/kuplahalli.png',lidl:'assets/lidl.png',tokmanni:'assets/tokmanni.png',kirjasto:'assets/kirjasto.png'};
-let loaded=0; const assetCount=Object.keys(files).length;
-for(const [k,s] of Object.entries(files)){const im=new Image();im.onload=()=>{if(++loaded===assetCount)start()};im.onerror=()=>document.getElementById('info').textContent='Assetin lataus epäonnistui: '+k;im.src=s;images[k]=im}
-const MAP=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>{
-  const edge=(x<2||y<2||x>COLS-3||y>ROWS-3); if(edge && (x<7||y<5||x>25)) return 2;
-  if((x+y*3)%13===0 || (x*7+y*2)%19===0) return 1; return 0;
-}));
-// Water features / coastlines, leaving both town centers on land.
-for(let y=0;y<ROWS;y++){MAP[y][0]=2;MAP[y][1]=2;MAP[y][COLS-1]=2;}
-for(let x=0;x<COLS;x++){MAP[0][x]=2;MAP[ROWS-1][x]=2;}
-const towns=[{name:'Nikkilä',x:21,y:9,buildings:[{name:'Kuplahalli',mark:'K',x:22,y:9}]},{name:'Söderkulla',x:9,y:16,buildings:[{name:'Lidl',mark:'L',x:10,y:16}]}];
-let buildMode=null,buildTown=null;
-for(const t of towns){for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=t.x+dx,y=t.y+dy;if(x>0&&x<COLS-1&&y>0&&y<ROWS-1)MAP[y][x]=0;}}
-const units=[{x:21,y:9,owner:0,move:1,maxMove:1,attack:2,defense:1,hp:4},{x:9,y:16,owner:1,move:1,maxMove:1,attack:2,defense:1,hp:4}];
-const states=[{name:'Nikkilä',gold:1,work:10,entertainment:0,research:0},{name:'Söderkulla',gold:0,work:10,entertainment:0,research:0}];
-let activeOwner=0,active=0,year=4000,busy=false;
-let camX=0,camY=0,drag=false,sx=0,sy=0,cx=0,cy=0;
-function resize(){const d=Math.max(2,devicePixelRatio||1);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';draw()}
-addEventListener('resize',resize);
-function iso(x,y){return{x:ORIGIN_X+(x-y)*TILE_W/2,y:ORIGIN_Y+(x+y)*TILE_H/2}}
-function fromIso(px,py){const a=(px+camX-ORIGIN_X)/(TILE_W/2),b=(py+camY-ORIGIN_Y)/(TILE_H/2);return{x:Math.round((a+b)/2),y:Math.round((b-a)/2)}}
-function inside(x,y){return x>=0&&x<COLS&&y>=0&&y<ROWS}
-function centerOn(u){const p=iso(u.x,u.y);camX=p.x-innerWidth/2;camY=p.y-innerHeight/2}
-function start(){resize();const u=units.find(u=>u.owner===activeOwner);if(u)centerOn(u);else centerOnTown(activeOwner);update();draw()}
-function centerOnTown(owner){const t=towns[owner];if(t){const p=iso(t.x,t.y);camX=p.x-innerWidth/2;camY=p.y-innerHeight/2;}}
-function update(){
- const st=states[activeOwner], u=units[active];
- document.getElementById('year').textContent=year+' eKr.';
- document.getElementById('stateLabel').textContent='Vuoro: '+st.name;
- document.getElementById('goldValue').textContent=st.gold;
- document.getElementById('workValue').textContent=st.work;
- document.getElementById('entertainmentValue').textContent=st.entertainment;
- document.getElementById('researchValue').textContent=st.research;
- document.getElementById('unitName').textContent=u&&u.owner===activeOwner?(u.type==='tiedustelija'?'Tiedustelija':'Legioona'):'—';
- document.getElementById('unitNumber').textContent=u&&u.owner===activeOwner?u.hp:'—';
- document.getElementById('moveValue').textContent=u&&u.owner===activeOwner?u.move:'—';
- document.getElementById('attackValue').textContent=u&&u.owner===activeOwner?u.attack:'—';
- document.getElementById('defenseValue').textContent=u&&u.owner===activeOwner?u.defense:'—';
- document.getElementById('resources').title=u&&u.owner===activeOwner?'Legioona '+(units.indexOf(u)+1)+' / '+st.name:st.name+' / ei yksikköä';
-}
-function diamond(p,stroke,w){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2+2);ctx.lineTo(p.x+TILE_W/2-2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2-2);ctx.lineTo(p.x-TILE_W/2+2,p.y);ctx.closePath();ctx.stroke()}
-function drawTerrainTile(im,p,key){
-  // Terrain assets are already normalized to the exact 88x44 isometric tile.
-  // Draw them directly so adjacent land tiles meet without an artificial seam.
-  ctx.drawImage(im,p.x-TILE_W/2,p.y-TILE_H/2,TILE_W,TILE_H);
-}
-function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);ctx.save();ctx.translate(-camX,-camY);
- const names=['aro','metsa','vesi'];
- for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const p=iso(x,y);const key=names[MAP[y][x]];drawTerrainTile(images[key],p,key);
-}
- // Town centers and their first buildings.
- for(const t of towns){const p=iso(t.x,t.y);ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.fillStyle='#f5f5f5';ctx.strokeStyle='#222';ctx.lineWidth=3;ctx.font='bold 22px Arial';ctx.textAlign='center';ctx.textBaseline='middle';const mark=t.name==='Nikkilä'?'N':'S';ctx.strokeText(mark,p.x,p.y);ctx.fillText(mark,p.x,p.y);ctx.font='bold 15px Arial';ctx.textBaseline='bottom';ctx.strokeText(t.name,p.x,p.y-TILE_H/2-5);ctx.fillText(t.name,p.x,p.y-TILE_H/2-5);}
- for(const t of towns){for(const b of t.buildings){const p=iso(b.x,b.y);ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();const key=b.mark==='K'?'kuplahalli':b.mark==='L'?'lidl':b.mark==='T'?'tokmanni':'kirjasto';const im=images[key];const maxW=68,maxH=58;const sc=Math.min(maxW/im.width,maxH/im.height);const w=im.width*sc,h=im.height*sc;const baseY=p.y+15;ctx.drawImage(im,p.x-w/2,baseY-h,w,h);ctx.fillStyle='#fff8df';ctx.strokeStyle='#382515';ctx.lineWidth=2;ctx.font='11px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.strokeText(b.name,p.x,baseY+18);ctx.fillText(b.name,p.x,baseY+18)}}
- const u=units[active];
- if(u && u.owner===activeOwner && !busy && u.move>0){for(let dy=-u.move;dy<=u.move;dy++)for(let dx=-u.move;dx<=u.move;dx++){if(!dx&&!dy)continue;if(Math.max(Math.abs(dx),Math.abs(dy))>u.move)continue;const x=u.x+dx,y=u.y+dy;if(!inside(x,y)||MAP[y][x]===2)continue;const p=iso(x,y);ctx.globalAlpha=.22;ctx.fillStyle='#ffe36b';ctx.beginPath();ctx.moveTo(p.x,p.y-TILE_H/2);ctx.lineTo(p.x+TILE_W/2,p.y);ctx.lineTo(p.x,p.y+TILE_H/2);ctx.lineTo(p.x-TILE_W/2,p.y);ctx.closePath();ctx.fill();ctx.globalAlpha=1}}
- for(let i=0;i<units.length;i++){const a=units[i],p=iso(a.x,a.y);const isActive=i===active && a.owner===activeOwner;if(isActive && (performance.now()%1600)<800)diamond(p,'#ffe36b',3);const im=images[a.type==='tiedustelija'?(a.owner===0?'tiedustelijaNikkila':'tiedustelijaSoderkulla'):(a.owner===0?'legioonaNikkila':'legioonaSoderkulla')];const sc=Math.min((a.type==='tiedustelija'?58:51)/im.width,(a.type==='tiedustelija'?87:87)/im.height);const w=im.width*sc,h=im.height*sc;ctx.drawImage(im,p.x-w/2,p.y-h+16,w,h);ctx.globalAlpha=1;ctx.fillStyle='#163e78';ctx.strokeStyle='#f4df9b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-h+4);ctx.lineTo(p.x+10,p.y-h+6);ctx.lineTo(p.x+10,p.y-h+27);ctx.lineTo(p.x,p.y-h+33);ctx.lineTo(p.x-10,p.y-h+27);ctx.lineTo(p.x-10,p.y-h+6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(a.hp),p.x,p.y-h+18)}
- ctx.restore()}
-function produceResources(){
- for(const t of towns){
-   const st=states[t.name==='Nikkilä'?0:1];
-   for(const b of t.buildings){
-     if(b.name==='Lidl' || b.name==='Tokmanni') st.gold += 1;
-     else if(b.name==='Kirjasto') st.research += 1;
-     else if(b.name==='Kuplahalli') st.entertainment += 1;
-   }
- }
-}
-function finish(){
- busy=true;draw();
- setTimeout(()=>{
-   const oldOwner=activeOwner;
-   activeOwner=1-activeOwner;
-   if(oldOwner===1){produceResources();year-=STEP;}
-   units.forEach(u=>{if(u.owner===activeOwner)u.move=u.maxMove||1;});
-   active=units.findIndex(u=>u.owner===activeOwner && u.move>0);
-   busy=false;update();
-   if(active!==-1) centerOn(units[active]); else centerOnTown(activeOwner);
-   draw();
- },700);
-}
-function continueOwnerTurn(){
- const next=units.findIndex(u=>u.owner===activeOwner && u.move>0);
- if(next!==-1){
-   active=next;update();draw();
- }else{
-   finish();
- }
-}
-function battle(attackerIndex,defenderIndex){
- const attacker=units[attackerIndex], defender=units[defenderIndex];
- const roll=Math.random();
- if(roll<0.50){
-   defender.hp-=attacker.attack;
-   if(defender.hp<=0){units.splice(defenderIndex,1);return 'attacker_destroyed_defender';}
-   return 'attacker_wins';
- }
- if(roll<0.75){
-   attacker.hp-=defender.defense;
-   if(attacker.hp<=0){units.splice(attackerIndex,1);return 'defender_destroyed_attacker';}
-   return 'defender_wins';
- }
- return 'draw';
-}
-function moveTo(x,y){
- if(busy)return;const a=units[active];if(!a||a.owner!==activeOwner)return;
- if(!inside(x,y)||MAP[y][x]===2)return;
- if(Math.max(Math.abs(x-a.x),Math.abs(y-a.y))>a.move||(x===a.x&&y===a.y))return;
- const targetIndex=units.findIndex((u,i)=>i!==active&&u.x===x&&u.y===y);
- if(targetIndex!==-1){
-   a.move=0;
-   const result=battle(active,targetIndex);
-   if(result==='attacker_destroyed_defender'){
-     a.x=x;a.y=y;
-     active=units.indexOf(a);
-   }else if(result==='defender_destroyed_attacker'){
-     const next=units.findIndex(u=>u.owner===activeOwner && u.move>0);
-     active=next;
-   }else{
-     active=units.indexOf(a);
-   }
-   continueOwnerTurn();return;
- }
- a.x=x;a.y=y;a.move=0;continueOwnerTurn();
-}
-document.getElementById('endTurn').addEventListener('click',()=>{if(!busy)finish();});
-document.getElementById('buildButton').addEventListener('click',()=>{document.getElementById('buildOptions').style.display='block';});
-document.getElementById('buildOptions').addEventListener('click',e=>{if(e.target.id==='buildLibrary'){if(states[activeOwner].work<2){document.getElementById('info').textContent='Rakentaminen vaatii 2 vasaraa.';return;}buildMode='kirjasto';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Kirjastolle ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildTokmanni'){if(states[activeOwner].work<3){document.getElementById('info').textContent='Rakentaminen vaatii 3 vasaraa.';return;}buildMode='tokmanni';document.getElementById('town').style.display='none';document.getElementById('info').textContent='Valitse Tokmannille ruutu enintään kahden ruudun päästä taajaman keskustasta.';draw();}else if(e.target.id==='buildLegion'){const owner=activeOwner,st=states[owner],town=buildTown;const occupied=units.some(u=>u.x===town.x&&u.y===town.y);if(st.gold>=3&&st.entertainment>=3&&!occupied){st.gold-=3;st.entertainment-=3;units.push({x:town.x,y:town.y,owner,move:1,maxMove:1,attack:2,defense:1,hp:4});active=units.length-1;document.getElementById('town').style.display='none';document.getElementById('info').textContent='Legioona rakennettu.';update();draw();}else if(occupied){document.getElementById('info').textContent='Taajaman keskuksessa on jo yksikkö.';}else{document.getElementById('info').textContent='Legioonan rakentaminen vaatii 3 kultaa ja 3 viihdettä.';} }else if(e.target.id==='buildScout'){const owner=activeOwner,st=states[owner],town=buildTown;const occupied=units.some(u=>u.x===town.x&&u.y===town.y);if(st.gold>=3&&st.work>=1&&st.entertainment>=2&&!occupied){st.gold-=3;st.work-=1;st.entertainment-=2;units.push({x:town.x,y:town.y,owner,move:2,maxMove:2,attack:1,defense:1,hp:4,type:'tiedustelija'});active=units.length-1;document.getElementById('town').style.display='none';document.getElementById('info').textContent='Tiedustelija rakennettu.';update();draw();}else if(occupied){document.getElementById('info').textContent='Taajaman keskuksessa on jo yksikkö.';}else{document.getElementById('info').textContent='Tiedustelijan rakentaminen vaatii 3 kultaa, 1 vasaran ja 2 viihdettä.';} } });
-let pointerStartX=0,pointerStartY=0,pointerStartCamX=0,pointerStartCamY=0,pointerMoved=false;
-canvas.addEventListener('pointerdown',e=>{
-  if(busy)return;
-  drag=true; pointerMoved=false;
-  pointerStartX=e.clientX; pointerStartY=e.clientY;
-  pointerStartCamX=camX; pointerStartCamY=camY;
-  canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove',e=>{
-  if(!drag)return;
-  const dx=e.clientX-pointerStartX,dy=e.clientY-pointerStartY;
-  if(Math.abs(dx)>6||Math.abs(dy)>6) pointerMoved=true;
-  if(pointerMoved){camX=pointerStartCamX-dx;camY=pointerStartCamY-dy;draw();}
-});
-canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('pointerup',e=>{
-  if(!drag)return;
-  const wasMoved=pointerMoved; drag=false;
-  try{canvas.releasePointerCapture(e.pointerId)}catch(_){ }
-  if(wasMoved)return;
-  const t=fromIso(e.clientX,e.clientY);
-  if(!inside(t.x,t.y))return;
+/* =========================================================
+   1. DATA – kaikki pelin säännöt ja kuvat yhdessä paikassa
+   ========================================================= */
+const COLS = 32, ROWS = 26;
+const TW = 128, TH = 64;
+const SAVE_KEY = 'civsipoo_save_v2';
+const RES = { gold: '🪙', work: '🔨', fun: '🎭', sci: '📜' };
 
-  // Right click opens/chooses; left click is reserved for active-unit movement.
-  if(e.button===2){
-    for(const town of towns){
-      if(t.x===town.x&&t.y===town.y){
-        buildMode=null; buildTown=town;
-        const isOwnTown=activeOwner===(town.name==='Nikkilä'?0:1);
-        document.getElementById('townName').textContent=town.name;
-        document.getElementById('buildings').innerHTML='<p><strong>Rakennukset</strong></p>'+town.buildings.map(b=>'<p style="margin:5px 0">'+b.name+'</p>').join('');
-        document.getElementById('buildOptions').style.display='none';
-        document.getElementById('buildOptions').innerHTML=isOwnTown?'<button id="buildLibrary">Kirjasto (2 🔨)</button> <button id="buildTokmanni">Tokmanni (3 🔨)</button> <button id="buildLegion">Legioona (3 🪙 + 3 🎭)</button> <button id="buildScout">Tiedustelija (3 🪙 + 1 🔨 + 2 🎭)</button>':'<p style="margin:8px 0;color:#754">Rakentaminen vain oman taajaman alueella.</p>';
-        document.getElementById('town').style.display='block';
-        return;
+const TERRAIN = {
+  aro:        { name: 'Aro',        cost: 1, def: 0, yield: {},          img: ['aro_1', 'aro_2', 'aro_3'] },
+  pelto:      { name: 'Pelto',      cost: 1, def: 0, yield: { gold: 1 }, img: ['pelto_1', 'pelto_2'] },
+  metsa:      { name: 'Metsä',      cost: 2, def: 1, yield: { work: 1 }, img: ['metsa_1', 'metsa_2', 'metsa_3'] },
+  kanervikko: { name: 'Kanervikko', cost: 1, def: 0, yield: { fun: 1 },  img: ['kanervikko'] },
+  vesi:       { name: 'Vesi',       water: true,     yield: {},          img: ['vesi'] },
+};
+
+// size: 2 = 2×2 ruutua. tech: vaaditaan teknologia. metro: kuuluu metropoliin.
+const BUILDINGS = {
+  kirjasto:     { name: 'Kirjasto',       cost: { work: 4 },  yield: { sci: 2 }, img: 'kirjasto' },
+  lidl:         { name: 'Lidl',           cost: { work: 4 },  yield: { gold: 2 }, img: 'lidl' },
+  tokmanni:     { name: 'Tokmanni',       cost: { work: 4 },  yield: { gold: 1, work: 1 }, img: 'tokmanni' },
+  kuplahalli:   { name: 'Kuplahalli',     cost: { work: 5 },  yield: { fun: 2 }, img: 'kuplahalli' },
+  ennustus:     { name: 'Ennustuskeskus', cost: { work: 5 },  yield: { fun: 2 }, img: 'ennustuskeskus', tech: 'okkultismi', vision: 3, info: 'näkee sumun läpi 3 ruutua' },
+  kauppakeskus: { name: 'Kauppakeskus',   cost: { work: 7 },  yield: { gold: 3 }, img: 'kauppakeskus', tech: 'kauppakeskukset', nameable: true },
+  metro:        { name: 'Metroasema',     cost: { work: 10 },  yield: { gold: 2 }, img: 'metroasema', tech: 'kaavoittaminen', metro: true },
+  stadion:      { name: 'Stadion',        cost: { work: 14 }, yield: { fun: 4 },  img: 'stadion', tech: 'suurtapahtuma', metro: true, size: 2 },
+  lentokentta:  { name: 'Lentokenttä',    cost: { work: 18 }, yield: { gold: 3 }, img: 'lentokentta', tech: 'globalisaatio', metro: true, size: 2 },
+};
+const METRO = ['metro', 'stadion', 'lentokentta'];
+
+const PROJECTS = {
+  lemminkainen: { name: 'Lemminkäisen luola', icon: '🕳️', tech: 'salatut', res: 'fun', total: 100, rate: 8, img: 'lemminkainen', where: 'metsän viereen' },
+  sipoonranta:  { name: 'Sipoonranta',        icon: '🏖️', tech: 'kiinteisto', res: 'gold', total: 110, rate: 9, img: 'sipoonranta', where: 'rannalle' },
+};
+
+const UNITS = {
+  legioona:     { name: 'Legioona',     cost: { gold: 3, work: 2, fun: 2 }, upkeep: { gold: 1 }, hp: 5, att: 3, def: 2, mp: 2, vision: 2, img: 'legioona', h: 74 },
+  talkoolainen: { name: 'Talkoolainen', cost: { gold: 2, work: 1 },         hp: 3, att: 0, def: 1, mp: 2, vision: 2, img: 'tyomies',  h: 70, worker: true },
+  hirvimies:    { name: 'Hirvimies',    cost: { gold: 3, work: 1, fun: 1 }, hp: 4, att: 2, def: 1, mp: 2, vision: 3, img: 'hirvimies', h: 74, range: 2, forestFree: true, tech: 'kalevala' },
+  kaivinkone:   { name: 'Kaivinkone',   cost: { gold: 4, work: 3 }, upkeep: { gold: 1 }, hp: 6, att: 2, def: 2, mp: 1, vision: 2, img: 'kaivinkone', h: 60, siege: 2, tech: 'tyomaa' },
+};
+
+const BRANCHES = {
+  mystiikka: { name: 'Mystiikka',  icon: '🎭', goal: 'Lemminkäisen luola', techs: ['juhannus', 'kalevala', 'okkultismi', 'ufo', 'salatut'] },
+  raha:      { name: 'Raha',       icon: '🪙', goal: 'Sipoonranta',        techs: ['kauppakeskukset', 'kantakortti', 'porssi', 'verosuunnittelu', 'kiinteisto'] },
+  metropoli: { name: 'Metropoli',  icon: '🔨', goal: 'Metropoli',          techs: ['tyomaa', 'kaavoittaminen', 'suurtapahtuma', 'brandays', 'globalisaatio'] },
+};
+const TECH_DEF = {
+  juhannus:        ['Juhannustaiat',          '+1 🎭 jokaisessa taajamassa'],
+  kalevala:        ['Kalevalan tulkinta',     'avaa Hirvimiehen'],
+  okkultismi:      ['Okkultismi',             'avaa Ennustuskeskuksen (+2 🎭, näkee sumun läpi)'],
+  ufo:             ['Ufotutkimus',            '+1 📜 jokaisessa taajamassa'],
+  salatut:         ['Salatut opit',           'avaa suurprojektin Lemminkäisen luola'],
+  kauppakeskukset: ['Kauppakeskukset',        'avaa Kauppakeskuksen (+3 🪙), jonka nimeät itse'],
+  kantakortti:     ['Kanta-asiakaskortti',    'Lidl, Tokmanni ja Kauppakeskus +1 🪙'],
+  porssi:          ['Pörssikeinottelu',       'ottaa joka vuosi 10 % vastustajan kassasta (enintään 3 🪙)'],
+  verosuunnittelu: ['Verosuunnittelu',        'rakennukset maksavat 25 % vähemmän 🔨'],
+  kiinteisto:      ['Kiinteistökeinottelu',   'avaa suurprojektin Sipoonranta'],
+  tyomaa:          ['Työmaa',                 'avaa Kaivinkoneen'],
+  kaavoittaminen:  ['Kaavoittaminen',         'avaa Metroaseman; alue kasvaa 3 ruutuun 4 rakennuksella'],
+  suurtapahtuma:   ['Suurtapahtumatalous',    'avaa Stadionin (2×2)'],
+  brandays:        ['Kansainvälinen brändäys','turismi: Stadion ja Lentokenttä +2 🪙'],
+  globalisaatio:   ['Globalisaatio',          'avaa Lentokentän (2×2)'],
+};
+const TECH_COST = [12, 25, 40, 60, 85];
+const TECHS = {};
+for (const [bk, b] of Object.entries(BRANCHES)) b.techs.forEach((k, i) => {
+  TECHS[k] = { key: k, branch: bk, name: TECH_DEF[k][0], desc: TECH_DEF[k][1], cost: TECH_COST[i], req: i ? b.techs[i - 1] : null };
+});
+
+const PLAYERS = [
+  { name: 'Nikkilä',    gen: 'Nikkilän',    color: '#2f6fd6', dark: '#163e78', img: 'sininen',
+    towns: ['Nikkilä', 'Paippinen', 'Savijärvi', 'Martinkylä', 'Hindsby', 'Kalkkiranta', 'Ingmansby'] },
+  { name: 'Söderkulla', gen: 'Söderkullan', color: '#d23a32', dark: '#7a1712', img: 'punainen',
+    towns: ['Söderkulla', 'Talma', 'Box', 'Sipoonlahti', 'Massby', 'Gesterby', 'Immersby'] },
+];
+const START = [{ x: 21, y: 8 }, { x: 8, y: 17 }];
+const MALL_NAMES = ['Sipoon Kauppis', 'Nikkilä Plaza', 'Söderkulla Outlet', 'Box Center', 'Sipoo Mall', 'Mega-Massby', 'Talma Tori'];
+
+const ASSETS = ['aro_1','aro_2','aro_3','pelto_1','pelto_2','metsa_1','metsa_2','metsa_3','kanervikko','vesi',
+  'lidl','tokmanni','kuplahalli','kirjasto','ennustuskeskus','kauppakeskus','metroasema','stadion','lentokentta','lemminkainen','sipoonranta',
+  'legioona_sininen','legioona_punainen','tyomies_sininen','tyomies_punainen','hirvimies_sininen','hirvimies_punainen','kaivinkone_sininen','kaivinkone_punainen'];
+
+/* =========================================================
+   2. APUFUNKTIOT
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const FAST = location.hash.includes('fast');   // testitila: tekoäly ilman viiveitä
+const sleep = ms => new Promise(r => setTimeout(r, FAST ? 0 : ms));
+const lerp = (a, b, t) => a + (b - a) * t;
+const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+const inside = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+const IDX = (x, y) => y * COLS + x;
+function seeded(s) { return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function noise(rand, cell) {
+  const gw = Math.ceil(COLS / cell) + 3, gh = Math.ceil(ROWS / cell) + 3, g = [];
+  for (let i = 0; i < gw * gh; i++) g.push(rand());
+  const s = t => t * t * (3 - 2 * t);
+  return (x, y) => {
+    const fx = x / cell, fy = y / cell, ix = Math.floor(fx), iy = Math.floor(fy), tx = s(fx - ix), ty = s(fy - iy);
+    const v = (i, j) => g[(iy + j) * gw + ix + i];
+    return lerp(lerp(v(0, 0), v(1, 0), tx), lerp(v(0, 1), v(1, 1), tx), ty);
+  };
+}
+function addRes(a, b, k = 1) { for (const r in b) a[r] = (a[r] || 0) + b[r] * k; return a; }
+function canPay(p, cost) { return Object.keys(cost).every(r => G.res[p][r] >= cost[r]); }
+function pay(p, cost) { for (const r in cost) G.res[p][r] -= cost[r]; }
+function costText(c) { return Object.entries(c).map(([r, v]) => v + ' ' + RES[r]).join(' + '); }
+function yieldText(y) { const t = Object.entries(y).filter(([, v]) => v).map(([r, v]) => '+' + v + ' ' + RES[r]).join(' '); return t || 'ei tuottoa'; }
+const hasTech = (p, k) => !!G.tech[p].done[k];
+function bCost(p, type) {                   // rakennuksen hinta (verosuunnittelu −25 %)
+  const c = { ...BUILDINGS[type].cost };
+  if (hasTech(p, 'verosuunnittelu')) for (const r in c) c[r] = Math.ceil(c[r] * 0.75);
+  return c;
+}
+const unitOK = (p, k) => !UNITS[k].tech || hasTech(p, UNITS[k].tech);
+const bldOK = (p, k) => !BUILDINGS[k].tech || hasTech(p, BUILDINGS[k].tech);
+const projOK = (p, k) => hasTech(p, PROJECTS[k].tech) && !G.sites.some(s => s.type === k);
+const newTech = () => ({ done: {}, cur: null, prog: {} });
+
+/* =========================================================
+   3. KUVAT
+   ========================================================= */
+const IMG = {};
+function loadAssets() {
+  return Promise.all(ASSETS.map(k => new Promise((ok, fail) => {
+    const im = new Image();
+    im.onload = () => { IMG[k] = makeMips(im); ok(); };
+    im.onerror = () => fail('Kuva puuttuu: assets/' + k + '.png');
+    im.src = 'assets/' + k + '.png';
+  })));
+}
+function makeMips(im) {
+  const mips = [im]; let w = im.width, h = im.height, src = im;
+  while (w > 48) {
+    w = Math.round(w / 2); h = Math.round(h / 2);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
+    mips.push(c); src = c;
+  }
+  return { w: im.width, h: im.height, mips };
+}
+function pick(a, screenW) { let best = a.mips[0]; for (const m of a.mips) if (m.width >= screenW) best = m; return best; }
+function ghostOf(a) {       // harmaa, himmeä haamuversio keskeneräiselle työmaalle
+  if (a.ghost) return a.ghost;
+  const src = a.mips.find(m => m.width <= 420) || a.mips[a.mips.length - 1];
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const x = c.getContext('2d'); x.drawImage(src, 0, 0);
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(96,108,130,0.72)'; x.fillRect(0, 0, c.width, c.height);   // ei getImageDataa: toimii myös file://-osoitteesta
+  a.ghost = c; return c;
+}
+
+/* =========================================================
+   4. PELIN TILA
+   ========================================================= */
+let G = null, sel = null, reach = null, busy = false, placing = null, hover = null;
+let VIS = [new Uint8Array(COLS * ROWS), new Uint8Array(COLS * ROWS)];
+let SEEALL = false;
+const floats = [];
+
+function newGame(aiMode) {
+  const seed = (Math.random() * 1e9) | 0;
+  const paths = ['mystiikka', 'raha', 'metropoli'].sort(() => Math.random() - 0.5);
+  G = { v: 2, seed, turn: 1, year: -4000, cur: 0, ai: [false, aiMode], over: false, nextId: 1,
+        map: genMap(seed), towns: [], units: [], sites: [],
+        res: [{ gold: 3, work: 4, fun: 2, sci: 0 }, { gold: 3, work: 4, fun: 2, sci: 0 }],
+        tech: [newTech(), newTech()], exp: [new Array(COLS * ROWS).fill(0), new Array(COLS * ROWS).fill(0)],
+        plan: [paths.slice(0, 2), paths.slice(1, 3).reverse()], cap: [null, null] };
+  const firstB = ['kuplahalli', 'lidl'];
+  for (let p = 0; p < 2; p++) {
+    const s = START[p];
+    const t = foundTown(p, s.x, s.y, true);
+    t.buildings.push({ type: firstB[p], x: s.x + 1, y: s.y });
+    addUnit('legioona', p, s.x, s.y);
+    addUnit('talkoolainen', p, s.x, s.y + 1);
+  }
+  updateVision();
+  beginTurn(true);
+}
+
+function genMap(seed) {
+  const R = seeded(seed);
+  const nA = noise(R, 6), nB = noise(R, 3), nF = noise(R, 3.2), nF2 = noise(R, 1.6), nK = noise(R, 4), nL = noise(R, 2.2);
+  const map = [];
+  for (let y = 0; y < ROWS; y++) { map.push([]); for (let x = 0; x < COLS; x++) {
+    const edge = Math.min(x, y, COLS - 1 - x, ROWS - 1 - y);
+    let h = 0.65 * nA(x, y) + 0.35 * nB(x, y);
+    h -= edge < 1 ? 9 : edge < 4 ? (4 - edge) * 0.14 : 0;
+    h -= Math.max(0, (x + y) - (COLS + ROWS) * 0.70) * 0.05;
+    map[y].push({ t: 'vesi', v: 0, h });
+  } }
+  const hs = map.flat().map(c => c.h).sort((a, b) => a - b), th = hs[Math.floor(hs.length * 0.32)];
+  for (const row of map) for (const c of row) if (c.h > th) c.t = 'aro';
+  for (const s of START) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) map[s.y + dy][s.x + dx].t = 'aro';
+  const seen = floodLand(map, START[0]);
+  if (!seen.has(START[1].y * COLS + START[1].x)) {
+    let x = START[0].x, y = START[0].y;
+    while (x !== START[1].x || y !== START[1].y) { x += Math.sign(START[1].x - x); y += Math.sign(START[1].y - y); map[y][x].t = 'aro'; }
+  }
+  const cells = []; for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (map[y][x].t !== 'vesi') cells.push({ x, y, f: 0.6 * nF(x, y) + 0.4 * nF2(x, y), k: nK(x, y), l: nL(x, y) });
+  const pct = (arr, q) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length * q)]; };
+  const fT = pct(cells.map(c => c.f), 0.70), kT = pct(cells.map(c => c.k), 0.90), lT = pct(cells.map(c => c.l), 0.97);
+  for (const c of cells) {
+    const m = map[c.y][c.x], near = Math.min(...START.map(s => cheb(s, c)));
+    if (near > 3 && c.l > lT) m.t = 'vesi';
+    else if (c.f > fT) m.t = 'metsa';
+    else if (c.k > kT) m.t = 'kanervikko';
+    else if (R() < (near <= 4 ? 0.16 : 0.06)) m.t = 'pelto';
+  }
+  const ring = [[-1,-1,'metsa'],[0,-1,'aro'],[1,-1,'metsa'],[1,0,'aro'],[1,1,'pelto'],[0,1,'aro'],[-1,1,'kanervikko'],[-1,0,'aro']];
+  for (const s of START) { map[s.y][s.x].t = 'aro'; for (const [dx, dy, t] of ring) map[s.y + dy][s.x + dx].t = t; }
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const c = map[y][x]; delete c.h;
+    const n = TERRAIN[c.t].img.length, r = R();
+    c.v = c.t === 'aro' ? (r < 0.45 ? 0 : r < 0.75 ? 2 : 1) : Math.floor(r * n);
+  }
+  return map;
+}
+function floodLand(map, s) {
+  const seen = new Set([s.y * COLS + s.x]), q = [s];
+  while (q.length) { const c = q.shift(); for (const [dx, dy] of DIRS) { const x = c.x + dx, y = c.y + dy, k = y * COLS + x;
+    if (inside(x, y) && !seen.has(k) && map[y][x].t !== 'vesi') { seen.add(k); q.push({ x, y }); } } }
+  return seen;
+}
+
+/* ---------- haut ---------- */
+const tile = (x, y) => G.map[y][x];
+const unitAt = (x, y) => G.units.find(u => u.x === x && u.y === y);
+const townAt = (x, y) => G.towns.find(t => t.x === x && t.y === y);
+const bsize = b => BUILDINGS[b.type].size || 1;
+function buildingAt(x, y) { for (const t of G.towns) for (const b of t.buildings) { const s = bsize(b); if (x >= b.x && x < b.x + s && y >= b.y && y < b.y + s) return { t, b }; } return null; }
+const siteAt = (x, y) => G.sites.find(s => x >= s.x && x < s.x + 2 && y >= s.y && y < s.y + 2) || null;
+function radius(t) {
+  const n = t.buildings.length; let r = n >= 2 ? 2 : 1;
+  if (n >= 4 && hasTech(t.owner, 'kaavoittaminen')) r = 3;
+  return r;
+}
+function ownerMap() {
+  const om = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  for (const t of G.towns) { const r = radius(t);
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = t.x + dx, y = t.y + dy;
+      if (inside(x, y) && !om[y][x] && tile(x, y).t !== 'vesi') om[y][x] = t; } }
+  for (const t of G.towns) om[t.y][t.x] = t;
+  return om;
+}
+
+/* ---------- luonti ---------- */
+function addUnit(type, owner, x, y) {
+  const d = UNITS[type];
+  const u = { id: G.nextId++, type, owner, x, y, hp: d.hp, mp: d.mp, acted: false, skip: false, rx: x, ry: y, path: [] };
+  G.units.push(u); return u;
+}
+function foundTown(p, x, y, quiet) {
+  const name = PLAYERS[p].towns.find(n => !G.towns.some(t => t.name === n)) || ('Kylä ' + (G.towns.length + 1));
+  const t = { id: G.nextId++, name, owner: p, x, y, buildings: [] };
+  G.towns.push(t); updateVision();
+  if (!quiet) toastIf(PLAYERS[p].name + ' perusti taajaman ' + name + '!', x, y, p);
+  return t;
+}
+function canFound(u) {
+  if (!UNITS[u.type].worker) return false;
+  if (tile(u.x, u.y).t === 'vesi' || buildingAt(u.x, u.y) || siteAt(u.x, u.y)) return false;
+  if (G.towns.some(t => cheb(t, u) < 3)) return false;
+  const o = ownerMap()[u.y][u.x];
+  return !o || o.owner === u.owner;
+}
+
+/* =========================================================
+   5. SOTASUMU
+   ========================================================= */
+function updateVision() {
+  if (!G) return;
+  for (let p = 0; p < 2; p++) {
+    const v = new Uint8Array(COLS * ROWS);
+    const mark = (cx, cy, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy > (r + 0.5) * (r + 0.5)) continue; const x = cx + dx, y = cy + dy; if (inside(x, y)) v[IDX(x, y)] = 1; } };
+    for (const t of G.towns) if (t.owner === p) { mark(t.x, t.y, radius(t) + 2); for (const b of t.buildings) if (BUILDINGS[b.type].vision) mark(b.x, b.y, BUILDINGS[b.type].vision); }
+    for (const u of G.units) if (u.owner === p) mark(u.x, u.y, UNITS[u.type].vision || 2);
+    for (const s of G.sites) if (s.owner === p) mark(s.x, s.y, 2);
+    VIS[p] = v;
+    const e = G.exp[p]; for (let i = 0; i < v.length; i++) if (v[i]) e[i] = 1;
+  }
+}
+function viewer() { return (!G.ai[0] && !G.ai[1]) ? G.cur : 0; }
+const seen = (p, x, y) => SEEALL || (inside(x, y) && VIS[p][IDX(x, y)] === 1);
+const explored = (p, x, y) => SEEALL || (inside(x, y) && G.exp[p][IDX(x, y)] === 1);
+function toastIf(msg, x, y, owner) {      // tapahtumat näytetään vain jos ne näkyvät katsojalle
+  const v = viewer();
+  if (owner === v || seen(v, x, y)) toast(msg);
+}
+
+/* =========================================================
+   6. TALOUS
+   ========================================================= */
+function bYield(p, type) {
+  const y = { ...BUILDINGS[type].yield };
+  if (hasTech(p, 'kantakortti') && (type === 'lidl' || type === 'tokmanni' || type === 'kauppakeskus')) y.gold = (y.gold || 0) + 1;
+  if (hasTech(p, 'brandays') && (type === 'stadion' || type === 'lentokentta')) y.gold = (y.gold || 0) + 2;
+  return y;
+}
+function townYield(t, om = ownerMap()) {
+  const p = t.owner, y = { gold: 1, work: 1, fun: 0, sci: 1 };
+  if (hasTech(p, 'juhannus')) y.fun += 1;
+  if (hasTech(p, 'ufo')) y.sci += 1;
+  for (const b of t.buildings) addRes(y, bYield(p, b.type));
+  const r = radius(t);
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const x = t.x + dx, yy = t.y + dy; if ((!dx && !dy) || !inside(x, yy) || om[yy][x] !== t) continue;
+    if (buildingAt(x, yy) || siteAt(x, yy)) continue;
+    addRes(y, TERRAIN[tile(x, yy).t].yield);
+  }
+  return y;
+}
+function workerYield(u) {
+  if (!UNITS[u.type].worker || townAt(u.x, u.y) || buildingAt(u.x, u.y) || siteAt(u.x, u.y)) return {};
+  return TERRAIN[tile(u.x, u.y).t].yield;
+}
+function income(p) {
+  const om = ownerMap(), y = { gold: 0, work: 0, fun: 0, sci: 0 };
+  for (const t of G.towns) if (t.owner === p) addRes(y, townYield(t, om));
+  for (const u of G.units) if (u.owner === p) { addRes(y, workerYield(u)); if (UNITS[u.type].upkeep) addRes(y, UNITS[u.type].upkeep, -1); }
+  return y;
+}
+
+/* ---------- tutkimus ---------- */
+function availTechs(p) { return Object.values(TECHS).filter(t => !G.tech[p].done[t.key] && (!t.req || G.tech[p].done[t.req])); }
+function processResearch(p) {
+  const T = G.tech[p], r = G.res[p]; if (!T.cur) return;
+  T.prog[T.cur] = (T.prog[T.cur] || 0) + r.sci; r.sci = 0;
+  const tech = TECHS[T.cur];
+  if (T.prog[T.cur] >= tech.cost) {
+    r.sci = T.prog[T.cur] - tech.cost; T.done[T.cur] = 1; T.cur = null;
+    if (!G.ai[p] || viewer() === p) toast('🔬 Tutkimus valmis: ' + tech.name + ' – ' + tech.desc);
+    else toast('Vastustaja on edistynyt teknologiassa.');
+  }
+}
+function setResearch(p, k) { G.tech[p].cur = k; updateHUD(); }
+
+/* ---------- suurprojektit ---------- */
+function siteCells(s) { return [[s.x, s.y], [s.x + 1, s.y], [s.x, s.y + 1], [s.x + 1, s.y + 1]]; }
+const onSite = (s, u) => u.x >= s.x && u.x < s.x + 2 && u.y >= s.y && u.y < s.y + 2;
+function processSites(p) {
+  for (const s of G.sites) {
+    if (s.owner !== p || s.done) continue;
+    const P = PROJECTS[s.type], r = G.res[p], draw = Math.min(r[P.res], P.rate);
+    if (draw > 0) {
+      const worker = G.units.some(u => u.owner === p && UNITS[u.type].worker && onSite(s, u));
+      r[P.res] -= draw; s.prog = Math.min(P.total, s.prog + draw * (worker ? 1.5 : 1));
+    }
+    if (s.prog >= P.total - 0.001) {
+      s.done = true; s.prog = P.total;
+      toast('🏆 ' + PLAYERS[p].name + ' sai valmiiksi: ' + P.name + '!');
+      addFloat(s.x, s.y, P.name + ' valmis!', PLAYERS[p].color);
+    }
+  }
+}
+function siteAnchors(type, p) {
+  const om = ownerMap(), out = [], mine = G.towns.filter(t => t.owner === p);
+  for (let y = 0; y < ROWS - 1; y++) for (let x = 0; x < COLS - 1; x++) {
+    const cells = [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]; let ok = true;
+    for (const [cx, cy] of cells) {
+      const o = om[cy][cx], u = unitAt(cx, cy);
+      if (!G.exp[p][IDX(cx, cy)] || tile(cx, cy).t === 'vesi' || townAt(cx, cy) || buildingAt(cx, cy) || siteAt(cx, cy) || (o && o.owner !== p) || (u && u.owner !== p)) { ok = false; break; }
+    }
+    if (!ok) continue;
+    if (!mine.some(t => Math.min(...cells.map(c => cheb({ x: c[0], y: c[1] }, t))) <= radius(t) + 3)) continue;
+    let water = 0, forest = 0;
+    for (let dy = -1; dy <= 2; dy++) for (let dx = -1; dx <= 2; dx++) { if (!inside(x + dx, y + dy)) continue; const t = tile(x + dx, y + dy).t; if (t === 'vesi') water++; if (t === 'metsa') forest++; }
+    if (type === 'lemminkainen' && !forest) continue;
+    if (type === 'sipoonranta' && !water) continue;
+    out.push({ x, y });
+  }
+  return out;
+}
+function startSite(p, type, x, y) {
+  const s = { id: G.nextId++, type, owner: p, x, y, prog: 0, done: false };
+  G.sites.push(s); updateVision();
+  toast('🏗️ ' + PLAYERS[p].name + ' aloitti projektin: ' + PROJECTS[type].name + '!');
+  return s;
+}
+function captureSite(s, p) {
+  const old = s.owner; s.owner = p;
+  toast('🚩 ' + PLAYERS[p].name + ' valtasi työmaan: ' + PROJECTS[s.type].name + '!');
+  addFloat(s.x, s.y, '🚩 Valloitettu!', PLAYERS[p].color);
+  updateVision(); checkVictory();
+}
+
+/* ---------- voittopolut ---------- */
+function metroTown(p) { return G.towns.find(t => t.owner === p && METRO.every(k => t.buildings.some(b => b.type === k))); }
+function metroCount(t) { return METRO.filter(k => t.buildings.some(b => b.type === k)).length; }
+function pathsOf(p) {
+  return { metropoli: !!metroTown(p),
+           lemminkainen: G.sites.some(s => s.type === 'lemminkainen' && s.done && s.owner === p),
+           sipoonranta: G.sites.some(s => s.type === 'sipoonranta' && s.done && s.owner === p) };
+}
+function checkVictory() {
+  if (!G || G.over) return !!(G && G.over);
+  for (let p = 0; p < 2; p++) {
+    const pa = pathsOf(p), n = Object.values(pa).filter(Boolean).length;
+    if (n >= 2) { endGame(p, 'Kaksi kolmesta voittopolusta täyttyi (' + [pa.metropoli && 'Metropoli', pa.lemminkainen && 'Lemminkäisen luola', pa.sipoonranta && 'Sipoonranta'].filter(Boolean).join(' + ') + ')!'); return true; }
+  }
+  for (let p = 0; p < 2; p++) if (!G.towns.some(t => t.owner === p)) { endGame(1 - p, 'Vastustajan kaikki taajamat valloitettiin.'); return true; }
+  return false;
+}
+function endGame(w, why) {
+  G.over = true; busy = false;
+  $('overTitle').textContent = PLAYERS[w].name + ' voitti!';
+  $('overText').textContent = (G.ai[w] ? 'Tekoäly' : PLAYERS[w].name) + ' · ' + why + ' Vuosi ' + yearText() + '.';
+  $('overModal').classList.remove('hidden');
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+}
+function yearText() { return G.year < 0 ? (-G.year) + ' eKr.' : G.year + ' jKr.'; }
+
+/* =========================================================
+   7. VUOROT
+   ========================================================= */
+function beginTurn(first) {
+  const p = G.cur, e = 1 - p;
+  for (const u of G.units) if (u.owner === p) {
+    if (!first && !u.acted) { const t = townAt(u.x, u.y); u.hp = Math.min(UNITS[u.type].hp, u.hp + (t && t.owner === p ? 2 : 1)); }
+    u.mp = UNITS[u.type].mp; u.acted = false; u.skip = false;
+  }
+  let inc = null;
+  if (!first) {
+    inc = income(p); addRes(G.res[p], inc);
+    for (const r in G.res[p]) G.res[p][r] = Math.max(0, G.res[p][r]);
+    if (G.ai[p]) aiChooseTech(p);
+    processResearch(p);
+    processSites(p);
+    if (hasTech(p, 'porssi')) {
+      const steal = Math.min(3, Math.floor(G.res[e].gold * 0.1));
+      if (steal > 0) { G.res[e].gold -= steal; G.res[p].gold += steal; if (!G.ai[p]) toast('📈 Pörssikeinottelu: +' + steal + ' 🪙 vastustajalta'); }
+    }
+  }
+  sel = null; reach = null; placing = null; $('placeBar').classList.add('hidden');
+  updateVision();
+  if (checkVictory()) { updateHUD(); return; }
+  updateHUD(); save();
+  if (G.ai[p]) { runAI(); return; }
+  const hot = !G.ai[0] && !G.ai[1];
+  if (hot && !first) showCover(p, inc); else afterCover(p, inc, first);
+}
+function afterCover(p, inc, first) {
+  if (inc && !first) toast(PLAYERS[p].gen + ' vuoro · ' + Object.entries(inc).map(([r, v]) => (v >= 0 ? '+' : '') + v + ' ' + RES[r]).join(' '));
+  if (!G.tech[p].cur && availTechs(p).length && G.turn > 1) toast('🔬 Valitse tutkimus!');
+  selectNext(true);
+  if (!sel) centerOn(G.towns.find(t => t.owner === p));
+  updateHUD();
+}
+function showCover(p, inc) {
+  $('coverText').textContent = PLAYERS[p].gen + ' vuoro';
+  $('coverText').style.color = PLAYERS[p].color === '#2f6fd6' ? '#8ab4ff' : '#ff8a80';
+  $('cover').classList.remove('hidden');
+  $('coverBtn').onclick = () => { $('cover').classList.add('hidden'); afterCover(p, inc, false); };
+}
+async function endTurn() {
+  if (busy || G.over) return;
+  closeModals(); placing = null; $('placeBar').classList.add('hidden');
+  if (G.cur === 1) { G.turn++; G.year += G.year < -1000 ? 50 : 25; if (G.year === 0) G.year = 1; }
+  G.cur = 1 - G.cur;
+  beginTurn(false);
+}
+
+/* =========================================================
+   8. LIIKE JA TAISTELU
+   ========================================================= */
+function moveCost(u, x, y) { const d = UNITS[u.type], t = tile(x, y).t; return (d.forestFree && t === 'metsa') ? 1 : TERRAIN[t].cost; }
+function computeReach(u) {
+  const best = new Map(), prev = new Map(), k = (x, y) => y * COLS + x, D = UNITS[u.type];
+  best.set(k(u.x, u.y), u.mp);
+  const q = [{ x: u.x, y: u.y, mp: u.mp }];
+  while (q.length) {
+    q.sort((a, b) => b.mp - a.mp); const c = q.shift();
+    if (c.mp <= 0) continue;
+    for (const [dx, dy] of DIRS) {
+      const x = c.x + dx, y = c.y + dy; if (!inside(x, y)) continue;
+      if (TERRAIN[tile(x, y).t].water) continue;
+      if (unitAt(x, y)) continue;
+      const town = townAt(x, y), site = siteAt(x, y);
+      const hostile = (town && town.owner !== u.owner) || (site && site.owner !== u.owner);
+      if (hostile && D.worker) continue;
+      const nm = Math.max(0, c.mp - moveCost(u, x, y)), key = k(x, y);
+      if (nm > (best.has(key) ? best.get(key) : -1)) {
+        best.set(key, nm); prev.set(key, k(c.x, c.y));
+        if (!hostile) q.push({ x, y, mp: nm });
       }
     }
-    const unitIndex=units.findIndex(u=>u.x===t.x&&u.y===t.y&&u.owner===activeOwner);
-    if(unitIndex!==-1){active=unitIndex; update(); draw(); return;}
+  }
+  best.delete(k(u.x, u.y));
+  const attacks = [], rng = D.range || 1;
+  if (u.mp > 0 && D.att > 0) for (let dy = -rng; dy <= rng; dy++) for (let dx = -rng; dx <= rng; dx++) {
+    if (!dx && !dy) continue; const e = unitAt(u.x + dx, u.y + dy); if (e && e.owner !== u.owner) attacks.push(e);
+  }
+  return { best, prev, attacks, has: (x, y) => best.has(k(x, y)), path(x, y) {
+    const out = []; let key = k(x, y); const start = k(u.x, u.y);
+    while (key !== start && key !== undefined) { out.unshift({ x: key % COLS, y: Math.floor(key / COLS) }); key = prev.get(key); }
+    return out; }, mpAt: (x, y) => best.get(k(x, y)) };
+}
+function moveUnit(u, x, y, r = computeReach(u)) {
+  if (!r.has(x, y)) return false;
+  u.path.push(...r.path(x, y));
+  u.mp = r.mpAt(x, y); u.x = x; u.y = y; u.acted = true;
+  checkCapture(u); updateVision();
+  return true;
+}
+function checkCapture(u) {
+  if (UNITS[u.type].worker) return;
+  const t = townAt(u.x, u.y); if (t && t.owner !== u.owner) captureTown(t, u.owner);
+  const s = siteAt(u.x, u.y); if (s && s.owner !== u.owner) captureSite(s, u.owner);
+}
+function captureTown(t, p) {
+  const old = t.owner; t.owner = p;
+  toastIf(PLAYERS[p].name + ' valloitti taajaman ' + t.name + '!', t.x, t.y, old);
+  addFloat(t.x, t.y, '🚩 ' + t.name, PLAYERS[p].color);
+  updateVision();
+  if (!checkVictory()) { /* jatkuu */ }
+}
+function defenseOf(d) {
+  let v = UNITS[d.type].def + (TERRAIN[tile(d.x, d.y).t].def || 0);
+  if (townAt(d.x, d.y)) v += 1;
+  return v;
+}
+function attack(a, d) {
+  const AD = UNITS[a.type], ranged = !!AD.range;
+  a.mp = 0; a.acted = true;
+  if (UNITS[d.type].worker && !ranged) {
+    d.owner = a.owner; d.mp = 0;
+    toastIf(PLAYERS[a.owner].name + ' kaappasi talkoolaisen!', d.x, d.y, a.owner);
+    addFloat(d.x, d.y, 'Kaapattu!', PLAYERS[a.owner].color); updateVision();
     return;
   }
+  let A = AD.att; if (AD.siege && (townAt(d.x, d.y) || siteAt(d.x, d.y))) A *= AD.siege;
+  const D = defenseOf(d), rounds = ranged ? 2 : 3;
+  let da = 0, dd = 0;
+  for (let i = 0; i < rounds && a.hp > 0 && d.hp > 0; i++) {
+    if (Math.random() < A / (A + D)) { d.hp--; dd++; } else if (!ranged) { a.hp--; da++; }
+  }
+  if (dd) addFloat(d.x, d.y, '−' + dd, '#ff6b5b');
+  if (da) addFloat(a.x, a.y, '−' + da, '#ff6b5b');
+  if (!dd && !da) addFloat(d.x, d.y, 'Huti!', '#fff');
+  a.shake = d.shake = performance.now();
+  if (d.hp <= 0) {
+    G.units = G.units.filter(u => u !== d);
+    toastIf(PLAYERS[a.owner].name + ': vihollisen ' + UNITS[d.type].name.toLowerCase() + ' tuhoutui!', d.x, d.y, a.owner === viewer() ? a.owner : -1);
+    if (a.hp > 0 && !ranged) { a.path.push({ x: d.x, y: d.y }); a.x = d.x; a.y = d.y; checkCapture(a); }
+  } else if (a.hp <= 0) {
+    G.units = G.units.filter(u => u !== a);
+    toastIf(PLAYERS[a.owner].gen + ' ' + UNITS[a.type].name.toLowerCase() + ' kaatui hyökkäyksessä.', a.x, a.y, a.owner === viewer() ? a.owner : -1);
+  } else toastIf('Taistelu jäi kesken: ' + a.hp + ' vs ' + d.hp + ' HP', d.x, d.y, -1);
+  updateVision();
+}
 
-  if((buildMode==='kirjasto'||buildMode==='tokmanni') && buildTown){const dx=t.x-buildTown.x,dy=t.y-buildTown.y;if(Math.max(Math.abs(dx),Math.abs(dy))<=2 && !(dx===0&&dy===0) && inside(t.x,t.y) && MAP[t.y][t.x]!==2 && !towns.some(tt=>tt.buildings.some(b=>b.x===t.x&&b.y===t.y))){const cost=buildMode==='kirjasto'?2:3;if(states[activeOwner].work<cost){document.getElementById('info').textContent='Rakentaminen vaatii '+cost+' vasaraa.';return;}states[activeOwner].work-=cost;buildTown.buildings.push({name:buildMode==='tokmanni'?'Tokmanni':'Kirjasto',mark:buildMode==='tokmanni'?'T':'B',x:t.x,y:t.y});buildMode=null;buildTown=null;document.getElementById('info').textContent='Liikuta valittua yksikkö vasemmalla napilla. Valitse yksikkö tai taajama oikealla napilla.';update();draw();return;}return;}
+/* =========================================================
+   9. PELAAJAN TOIMINNOT
+   ========================================================= */
+function select(u) { sel = u; reach = u && u.mp > 0 ? computeReach(u) : null; updateHUD(); }
+function selectNext(center) {
+  const own = G.units.filter(u => u.owner === G.cur && u.mp > 0 && !u.skip);
+  if (!own.length) { select(null); return; }
+  const i = sel ? own.indexOf(sel) : -1;
+  const u = own[(i + 1) % own.length];
+  select(u); if (center !== false) centerOn(u, true);
+}
+function afterAction() {
+  if (sel && !G.units.includes(sel)) sel = null;
+  if (sel && sel.mp > 0) select(sel);
+  else setTimeout(() => { if (!busy && G && !G.ai[G.cur] && !G.over) selectNext(true); }, 250);
+  updateHUD();
+}
+function onTap(x, y) {
+  if (!G || G.over || busy || G.ai[G.cur]) return;
+  if (!inside(x, y)) return;
+  const v = viewer();
+  if (placing) { tryPlace(x, y); return; }
+  if (!explored(v, x, y)) { toast('Tutkimaton alue.'); return; }
+  const u = unitAt(x, y), t = townAt(x, y);
+  const uvis = u && (u.owner === G.cur || seen(v, x, y));
+  if (uvis && u.owner === G.cur) {
+    if (u === sel && t && t.owner === G.cur) openTown(t); else select(u);
+    return;
+  }
+  if (sel && sel.owner === G.cur && reach) {
+    if (uvis && reach.attacks.includes(u)) { attack(sel, u); afterAction(); return; }
+    if (reach.has(x, y)) { moveUnit(sel, x, y, reach); afterAction(); return; }
+  }
+  if (t && t.owner === G.cur) { openTown(t); return; }
+  if (uvis) toast(PLAYERS[u.owner].gen + ' ' + UNITS[u.type].name.toLowerCase() + ' · HP ' + u.hp + '/' + UNITS[u.type].hp);
+  else if (t) toast(t.name + ' (' + PLAYERS[t.owner].name + ')');
+  else { const s = siteAt(x, y); if (s) toast(PROJECTS[s.type].name + ' · ' + (s.done ? 'valmis' : Math.floor(s.prog) + '/' + PROJECTS[s.type].total) + ' · ' + PLAYERS[s.owner].name); }
+}
 
-  // Left click: move the active unit, and nothing else.
-  moveTo(t.x,t.y);
+/* ---------- taajama ---------- */
+function freeSpawn(t) {
+  if (!unitAt(t.x, t.y)) return { x: t.x, y: t.y };
+  const om = ownerMap(), c = [];
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = t.x + dx, y = t.y + dy;
+    if (inside(x, y) && om[y][x] === t && !unitAt(x, y)) c.push({ x, y, d: Math.abs(dx) + Math.abs(dy) }); }
+  c.sort((a, b) => a.d - b.d); return c[0] || null;
+}
+function buildAnchors(t, size) {
+  const om = ownerMap(), out = [];
+  const okc = (x, y) => inside(x, y) && om[y][x] === t && !(x === t.x && y === t.y) && !buildingAt(x, y) && !siteAt(x, y);
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    let ok = true;
+    for (let dy = 0; dy < size && ok; dy++) for (let dx = 0; dx < size; dx++) if (!okc(x + dx, y + dy)) { ok = false; break; }
+    if (ok) out.push({ x, y });
+  }
+  return out;
+}
+function buildUnit(t, type) {
+  const s = freeSpawn(t); if (!s || !unitOK(t.owner, type) || !canPay(t.owner, UNITS[type].cost)) return null;
+  pay(t.owner, UNITS[type].cost);
+  const u = addUnit(type, t.owner, s.x, s.y); updateVision();
+  return u;
+}
+function placeBuilding(t, type, x, y, name) {
+  pay(t.owner, bCost(t.owner, type));
+  const b = { type, x, y }; if (name) b.name = name;
+  t.buildings.push(b); updateVision();
+  addFloat(x, y, (name || BUILDINGS[type].name) + '!', '#ffe9a8');
+  checkVictory();
+  return b;
+}
+function openTown(t) {
+  const p = t.owner, om = ownerMap(), y = townYield(t, om);
+  const own = p === G.cur && !G.ai[p];
+  let h = `<h2 style="color:${PLAYERS[p].dark}">${t.name}</h2><div class="muted">${PLAYERS[p].name} · alue ${radius(t)} ruutua · tuotto ${yieldText(y)}</div>`;
+  h += `<h3>Rakennukset</h3>`;
+  if (!t.buildings.length) h += `<div class="muted">Ei vielä rakennuksia.</div>`;
+  for (const b of t.buildings) { const B = BUILDINGS[b.type];
+    h += `<div class="row"><img src="assets/${B.img}.png"><div class="grow"><b>${b.name || B.name}</b>${b.name ? ' <span class="muted">(' + B.name + ')</span>' : ''}<br>${yieldText(bYield(p, b.type))} / vuoro${B.info ? ' · ' + B.info : ''}</div></div>`; }
+  if (own) {
+    for (const [k, B] of Object.entries(BUILDINGS)) if (bldOK(p, k) && !t.buildings.some(x => x.type === k)) {
+      const cost = bCost(p, k), fits = buildAnchors(t, B.size || 1).length, ok = canPay(p, cost) && fits;
+      h += `<div class="row"><img src="assets/${B.img}.png"><div class="grow"><b>${B.name}</b>${B.size ? ' (2×2)' : ''} · ${costText(cost)}<br>${yieldText(bYield(p, k))} / vuoro${B.info ? ' · ' + B.info : ''}${!fits ? '<br><span class="muted">Ei tilaa taajaman alueella.</span>' : ''}${B.nameable ? '<input type="text" id="kkName" maxlength="22" placeholder="Nimeä kauppakeskus" value="' + nextMallName() + '">' : ''}</div><button data-b="${k}" ${ok ? '' : 'disabled'}>Rakenna</button></div>`;
+    }
+    if (t.buildings.length < 2) h += `<div class="muted">Kahden rakennuksen jälkeen taajaman alue kasvaa.</div>`;
+    h += `<h3>Yksiköt</h3>`;
+    const sp = freeSpawn(t);
+    for (const [k, u] of Object.entries(UNITS)) if (unitOK(p, k)) {
+      const ok = canPay(p, u.cost) && sp;
+      h += `<div class="row"><img src="assets/${u.img}_${PLAYERS[p].img}.png"><div class="grow"><b>${u.name}</b> · ${costText(u.cost)}<br>HP ${u.hp} · ⚔️ ${u.att}${u.range ? ' (kantama ' + u.range + ')' : ''} · 🛡️ ${u.def} · liike ${u.mp}${u.upkeep ? ' · ylläpito ' + costText(u.upkeep) : ''}</div><button data-u="${k}" ${ok ? '' : 'disabled'}>Kouluta</button></div>`;
+    }
+  }
+  h += `<p style="text-align:right;margin-top:14px"><button id="townClose">Sulje</button></p>`;
+  $('townBox').innerHTML = h;
+  $('townModal').classList.remove('hidden');
+  $('townClose').onclick = closeModals;
+  $('townBox').querySelectorAll('button[data-b]').forEach(bt => bt.onclick = () => {
+    const type = bt.dataset.b, B = BUILDINGS[type];
+    const name = B.nameable ? (($('kkName') && $('kkName').value.trim()) || nextMallName()).slice(0, 22) : null;
+    placing = { kind: 'building', town: t, type, size: B.size || 1, name }; closeModals();
+    $('placeText').textContent = 'Valitse paikka: ' + (name || B.name) + (B.size ? ' (2×2, napauta ruudun ylänurkkaa)' : '') + ' – vihreät ruudut';
+    $('placeBar').classList.remove('hidden'); centerOn(t, true);
+  });
+  $('townBox').querySelectorAll('button[data-u]').forEach(bt => bt.onclick = () => {
+    const u = buildUnit(t, bt.dataset.u);
+    if (u) { toast(t.name + ': ' + UNITS[u.type].name + ' valmis!'); closeModals(); select(u); updateHUD(); }
+  });
+}
+function nextMallName() { return MALL_NAMES.find(n => !G.towns.some(t => t.buildings.some(b => b.name === n))) || 'Sipoo Mall ' + (G.nextId % 100); }
+
+/* ---------- sijoitus (rakennus tai työmaa) ---------- */
+function placeAnchors() {
+  if (!placing) return [];
+  if (!placing.list) placing.list = placing.kind === 'site' ? siteAnchors(placing.type, G.cur) : buildAnchors(placing.town, placing.size);
+  return placing.list;
+}
+function placeSize() { return placing.kind === 'site' ? 2 : placing.size; }
+function anchorFor(list, x, y, n) {
+  let f = list.find(a => a.x === x && a.y === y); if (f) return f;
+  return list.find(a => x >= a.x && x < a.x + n && y >= a.y && y < a.y + n) || null;
+}
+function tryPlace(x, y) {
+  const list = placeAnchors(), a = anchorFor(list, x, y, placeSize());
+  if (!a) { toast(placing.kind === 'site' ? 'Työmaa ei voi olla siinä (katso vihreät ruudut).' : 'Rakennus pitää sijoittaa taajaman alueelle.'); return; }
+  if (placing.kind === 'site') { startSite(G.cur, placing.type, a.x, a.y); }
+  else { const { town, type, name } = placing; if (!canPay(town.owner, bCost(town.owner, type))) { toast('Resurssit eivät riitä.'); placing = null; $('placeBar').classList.add('hidden'); return; }
+    placeBuilding(town, type, a.x, a.y, name); toast(town.name + ': ' + (name || BUILDINGS[type].name) + ' valmis!'); }
+  placing = null; $('placeBar').classList.add('hidden'); updateHUD();
+}
+function closeModals() { for (const m of ['townModal', 'techModal', 'winModal', 'helpModal']) $(m).classList.add('hidden'); }
+
+/* ---------- tutkimus- ja voittoikkuna ---------- */
+function openTech() {
+  const p = G.cur, T = G.tech[p];
+  let h = `<h2>🔬 Tutkimus</h2><div class="muted">📜 kertyy taajamista ja Kirjastoista. Yksi teknologia kerrallaan.</div>`;
+  for (const [bk, b] of Object.entries(BRANCHES)) {
+    h += `<h3>${b.icon} ${b.name} → ${b.goal}</h3>`;
+    for (const k of b.techs) {
+      const t = TECHS[k], done = T.done[k], cur = T.cur === k, avail = !done && (!t.req || T.done[t.req]);
+      const prog = T.prog[k] || 0;
+      h += `<div class="tech ${done ? 'done' : cur ? 'cur' : avail ? '' : 'lock'}"><div class="grow"><b>${done ? '✓ ' : ''}${t.name}</b> · ${t.cost} 📜<br>${t.desc}${cur || (prog && !done) ? `<div class="pbar"><i style="width:${Math.min(100, prog / t.cost * 100)}%"></i></div>` : ''}</div>${avail && !cur ? `<button data-t="${k}">Tutki</button>` : cur ? '▶' : done ? '' : '🔒'}</div>`;
+    }
+  }
+  h += `<p style="text-align:right;margin-top:14px"><button id="techClose">Sulje</button></p>`;
+  $('techBox').innerHTML = h; $('techModal').classList.remove('hidden');
+  $('techClose').onclick = closeModals;
+  $('techBox').querySelectorAll('button[data-t]').forEach(bt => bt.onclick = () => { setResearch(p, bt.dataset.t); openTech(); });
+}
+function openWin() {
+  const p = G.cur, e = 1 - p, v = viewer();
+  const mine = pathsOf(p), theirs = pathsOf(e);
+  let h = `<h2>🏆 Voittopolut</h2><div class="muted">Täytä kaksi kolmesta. Suurprojekti on ainutlaatuinen.</div>`;
+  // metropoli
+  const best = t => metroCount(t);
+  const myT = G.towns.filter(t => t.owner === p).sort((a, b) => best(b) - best(a))[0];
+  const enT = G.towns.filter(t => t.owner === e && explored(v, t.x, t.y)).sort((a, b) => best(b) - best(a))[0];
+  const mk = (t, k) => t && t.buildings.some(b => b.type === k) ? '✓' : '–';
+  h += `<div class="path ${mine.metropoli ? 'mine' : ''}"><b>🏙️ Metropoli</b> – Metroasema + Stadion + Lentokenttä samassa taajamassa<br>`
+     + `Sinä: ${myT ? myT.name + ' · Metro ' + mk(myT, 'metro') + ' Stadion ' + mk(myT, 'stadion') + ' Lentokenttä ' + mk(myT, 'lentokentta') : '–'}${mine.metropoli ? ' ✅' : ''}<br>`
+     + `Vastustaja: ${enT ? enT.name + ' · Metro ' + mk(enT, 'metro') + ' Stadion ' + mk(enT, 'stadion') + ' Lentokenttä ' + mk(enT, 'lentokentta') : '?'}${theirs.metropoli ? ' ⚠️' : ''}</div>`;
+  for (const [k, P] of Object.entries(PROJECTS)) {
+    const s = G.sites.find(x => x.type === k);
+    let st;
+    if (!s) st = hasTech(p, P.tech) ? `Ei aloitettu. Perusta työmaa ${P.where}, ylläpito ${P.rate} ${RES[P.res]}/vuoro, yht. ${P.total}.` : `🔒 Vaatii teknologian: ${TECHS[P.tech].name}`;
+    else st = `${PLAYERS[s.owner].name}: ${s.done ? 'valmis ✅' : 'työmaa ' + Math.floor(s.prog) + '/' + P.total}`;
+    const own = s && s.owner === p;
+    h += `<div class="path ${own && s.done ? 'mine' : ''}"><b>${P.icon} ${P.name}</b><br>${st}`
+       + (s && !s.done ? `<div class="pbar"><i style="width:${s.prog / P.total * 100}%"></i></div>` : '')
+       + (!s && projOK(p, k) ? `<div style="margin-top:6px"><button data-s="${k}">Perusta työmaa</button></div>` : '')
+       + (s ? `<div style="margin-top:6px"><button data-g="${k}">Näytä kartalla</button></div>` : '') + `</div>`;
+  }
+  h += `<p style="text-align:right;margin-top:14px"><button id="winClose">Sulje</button></p>`;
+  $('winBox').innerHTML = h; $('winModal').classList.remove('hidden');
+  $('winClose').onclick = closeModals;
+  $('winBox').querySelectorAll('button[data-s]').forEach(bt => bt.onclick = () => {
+    const type = bt.dataset.s, n = siteAnchors(type, p).length;
+    if (!n) { toast('Ei sopivaa paikkaa tutkitulla alueella: tutki karttaa lisää (työmaa tulee ' + PROJECTS[type].where + ', enintään 3 ruutua oman alueen ulkopuolelle).'); return; }
+    placing = { kind: 'site', type }; closeModals();
+    $('placeText').textContent = PROJECTS[type].name + ': napauta vihreää ruutua (työmaan ylänurkka, 2×2)';
+    $('placeBar').classList.remove('hidden');
+    const a = siteAnchors(type, p)[0]; centerOn(a, true);
+  });
+  $('winBox').querySelectorAll('button[data-g]').forEach(bt => bt.onclick = () => { const s = G.sites.find(x => x.type === bt.dataset.g); closeModals(); centerOn({ x: s.x + 0.5, y: s.y + 0.5 }, true); });
+}
+
+/* =========================================================
+   10. TEKOÄLY
+   ========================================================= */
+function distField(targets) {
+  const d = Array.from({ length: ROWS }, () => Array(COLS).fill(1e9)), q = [];
+  for (const t of targets) { d[t.y][t.x] = 0; q.push(t); }
+  while (q.length) { const c = q.shift(); for (const [dx, dy] of DIRS) { const x = c.x + dx, y = c.y + dy;
+    if (inside(x, y) && tile(x, y).t !== 'vesi' && d[y][x] > d[c.y][c.x] + 1) { d[y][x] = d[c.y][c.x] + 1; q.push({ x, y }); } } }
+  return d;
+}
+function stepToward(u, field, avoid) {
+  const r = computeReach(u); let best = null, bv = field[u.y][u.x];
+  for (const key of r.best.keys()) { const x = key % COLS, y = Math.floor(key / COLS);
+    if (avoid && avoid(x, y)) continue;
+    const v = field[y][x] - r.best.get(key) * 0.01; if (v < bv) { bv = v; best = { x, y }; } }
+  if (best) { moveUnit(u, best.x, best.y, r); return true; }
+  return false;
+}
+function aiPlan(p) {
+  const lost = { mystiikka: 'lemminkainen', raha: 'sipoonranta' }, used = new Set(G.plan[p]);
+  G.plan[p] = G.plan[p].map(b => {
+    const type = lost[b];
+    if (type && G.sites.some(s => s.type === type && s.owner !== p && s.done)) { const alt = ['mystiikka', 'raha', 'metropoli'].find(x => !used.has(x)); if (alt) { used.add(alt); return alt; } }
+    return b;
+  });
+  return G.plan[p];
+}
+function aiChooseTech(p) {
+  const T = G.tech[p]; if (T.cur) return;
+  const avail = availTechs(p); if (!avail.length) return;
+  const plan = aiPlan(p); let best = null, bs = 1e9;
+  for (const t of avail) {
+    const bi = plan.indexOf(t.branch), idx = BRANCHES[t.branch].techs.indexOf(t.key);
+    const s = (bi < 0 ? 100 : 0) + idx + (bi > 0 ? 0.5 : 0) - (t.key === 'tyomaa' ? 0.2 : 0);
+    if (s < bs) { bs = s; best = t.key; }
+  }
+  T.cur = best;
+}
+const capital = p => {
+  let t = G.towns.find(x => x.id === G.cap[p] && x.owner === p);
+  if (!t) { t = G.towns.filter(x => x.owner === p).sort((a, b) => b.buildings.length - a.buildings.length || a.id - b.id)[0]; G.cap[p] = t ? t.id : null; }
+  return t;
+};
+async function runAI() {
+  busy = true; updateHUD();
+  const p = G.cur, e = 1 - p;
+  await sleep(450);
+  const plan = aiPlan(p);
+  const myTowns = () => G.towns.filter(t => t.owner === p);
+  const mine = type => G.units.filter(u => u.owner === p && u.type === type);
+  const enemyNear = t => G.units.some(u => u.owner === e && cheb(u, t) <= 3 && seen(p, u.x, u.y));
+
+  // 1) suurprojektit
+  for (const [k, P] of Object.entries(PROJECTS)) {
+    const path = k === 'lemminkainen' ? 'mystiikka' : 'raha';
+    if (!plan.includes(path) || !projOK(p, k)) continue;
+    const list = siteAnchors(k, p); if (!list.length) continue;
+    const own = myTowns(), score = a => Math.min(...own.map(t => cheb(a, t))) + Math.random() * 1.5;
+    list.sort((a, b) => score(a) - score(b)); startSite(p, k, list[0].x, list[0].y);
+  }
+  // 2) rakentaminen ja koulutus
+  for (const t of myTowns()) {
+    const order = enemyNear(t) ? ['legioona'] : [];
+    if (mine('legioona').length < Math.min(14, myTowns().length + 2 + Math.floor(G.turn / 8) + (G.res[p].gold > 80 ? 2 : 0))) order.push('legioona');
+    if (mine('talkoolainen').length < Math.min(4, myTowns().length + 1)) order.push('talkoolainen');
+    if (unitOK(p, 'hirvimies') && mine('hirvimies').length < 2) order.push('hirvimies');
+    if (unitOK(p, 'kaivinkone') && mine('kaivinkone').length < (G.turn > 28 ? 2 : 1) && G.turn > 14) order.push('kaivinkone');
+    for (const type of order) { const u = buildUnit(t, type); if (u) break; }
+    const want = ['kirjasto', 'kuplahalli', 'lidl', 'tokmanni', 'ennustus', 'kauppakeskus'];
+    if (plan.includes('metropoli') && capital(p) === t) want.push('metro', 'stadion', 'lentokentta');
+    for (const k of want) {
+      if (!bldOK(p, k) || t.buildings.some(b => b.type === k) || !canPay(p, bCost(p, k))) continue;
+      const B = BUILDINGS[k], spots = buildAnchors(t, B.size || 1);
+      if (!spots.length) continue;
+      const cost = a => { let c = 0; for (let dy = 0; dy < (B.size || 1); dy++) for (let dx = 0; dx < (B.size || 1); dx++) c += Object.keys(TERRAIN[tile(a.x + dx, a.y + dy).t].yield).length; return c; };
+      spots.sort((a, b) => cost(a) - cost(b));
+      placeBuilding(t, k, spots[0].x, spots[0].y, B.nameable ? nextMallName() : null); break;
+    }
+  }
+  updateVision();
+  // 3) yksiköt
+  const list = G.units.filter(u => u.owner === p);
+  for (const u of list) {
+    if (G.over) break;
+    if (!G.units.includes(u) || u.mp <= 0) continue;
+    if (UNITS[u.type].worker) aiWorker(u, p, e); else aiLegion(u, p, e);
+    updateVision();
+    await sleep(140);
+  }
+  await sleep(300);
+  busy = false;
+  if (!G.over) endTurn();
+}
+function aiWorker(u, p, e) {
+  const towns = G.towns.filter(t => t.owner === p);
+  const workers = G.units.filter(w => w.owner === p && UNITS[w.type].worker);
+  const danger = (x, y) => G.units.some(v => v.owner === e && !UNITS[v.type].worker && cheb(v, { x, y }) <= 2 && seen(p, v.x, v.y));
+  const site = G.sites.find(s => s.owner === p && !s.done);
+  if (site && workers.indexOf(u) === 0) {
+    if (onSite(site, u)) { u.mp = 0; return; }
+    const f = distField(siteCells(site).map(c => ({ x: c[0], y: c[1] }))); if (f[u.y][u.x] < 18 && !danger(u.x, u.y)) { stepToward(u, f, danger); return; }
+  }
+  if (towns.length < 6 && workers.indexOf(u) > 0) {
+    if (canFound(u) && goodSite(u.x, u.y) >= 3) { G.units = G.units.filter(w => w !== u); foundTown(p, u.x, u.y); return; }
+    const sites = [];
+    for (let y = 1; y < ROWS - 1; y++) for (let x = 1; x < COLS - 1; x++) {
+      const fake = { type: u.type, owner: p, x, y };
+      if (tile(x, y).t !== 'vesi' && !unitAt(x, y) && canFound(fake) && !danger(x, y)) { const s = goodSite(x, y); if (s >= 3) sites.push({ x, y, s }); }
+    }
+    if (sites.length) {
+      const df = distField([{ x: u.x, y: u.y }]);
+      sites.sort((a, b) => (df[a.y][a.x] - a.s * 0.7) - (df[b.y][b.x] - b.s * 0.7));
+      const tgt = sites[0];
+      if (df[tgt.y][tgt.x] < 14) { stepToward(u, distField([tgt]), danger); return; }
+    }
+  }
+  if (Object.keys(workerYield(u)).length && !danger(u.x, u.y)) { u.mp = 0; return; }
+  const goals = [];
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const tt = tile(x, y).t;
+    if ((tt === 'metsa' || tt === 'pelto' || tt === 'kanervikko') && !unitAt(x, y) && !buildingAt(x, y) && !siteAt(x, y) && !danger(x, y)
+        && towns.some(t => cheb(t, { x, y }) <= 3)) goals.push({ x, y });
+  }
+  if (goals.length) stepToward(u, distField(goals), danger);
+}
+function goodSite(x, y) {
+  let s = 0;
+  for (const [dx, dy] of DIRS) { const xx = x + dx, yy = y + dy; if (!inside(xx, yy)) continue; const t = tile(xx, yy).t;
+    if (t === 'metsa' || t === 'pelto' || t === 'kanervikko') s++; else if (t === 'vesi') s -= 0.5; }
+  return s;
+}
+function aiFront(p, e) {            // taajamat, jotka tarvitsevat varuskunnan: kaksi vihollisen lähintä
+  const towns = G.towns.filter(t => t.owner === p);
+  const tg = G.towns.filter(t => t.owner === e && explored(p, t.x, t.y)).map(t => ({ x: t.x, y: t.y }))
+    .concat(G.units.filter(v => v.owner === e && seen(p, v.x, v.y)).map(v => ({ x: v.x, y: v.y })));
+  if (!tg.length) return towns.slice(0, 2);
+  const f = distField(tg);
+  return towns.slice().sort((a, b) => f[a.y][a.x] - f[b.y][b.x]).slice(0, 2);
+}
+function aiLegion(u, p, e) {
+  const D = UNITS[u.type], r = computeReach(u);
+  const vis = d => seen(p, d.x, d.y);
+  const targets = r.attacks.filter(vis).sort((a, b) => a.hp - b.hp);
+  for (const d of targets) {
+    let A = D.att; if (D.siege && (townAt(d.x, d.y) || siteAt(d.x, d.y))) A *= D.siege;
+    const DD = defenseOf(d);
+    if (D.range || UNITS[d.type].worker || (A / (A + DD) >= 0.45 && u.hp >= 2) || d.hp <= 1) { attack(u, d); return; }
+  }
+  const towns = G.towns.filter(t => t.owner === p), here = townAt(u.x, u.y);
+  const legions = G.units.filter(v => v.owner === p && !UNITS[v.type].worker);
+  const must = aiFront(p, e);
+  if (here && here.owner === p) {
+    const close = G.units.some(v => v.owner === e && cheb(v, here) <= 3 && vis(v));
+    if (must.includes(here) || (close && legions.length <= towns.length)) { u.mp = 0; return; }
+  }
+  const empty = must.filter(t => { const v = unitAt(t.x, t.y); return !v || v.owner !== p; });
+  for (const t of empty) {
+    const free = legions.filter(v => !(townAt(v.x, v.y) && must.includes(townAt(v.x, v.y))));
+    free.sort((a, b) => cheb(a, t) - cheb(b, t));
+    if (free[0] === u) { stepToward(u, distField([{ x: t.x, y: t.y }])); return; }
+  }
+  // työmaan vartiointi
+  const mySites = G.sites.filter(s => s.owner === p);
+  const near = (s, v) => cheb({ x: s.x + 0.5, y: s.y + 0.5 }, v) <= 2.5;
+  const unguarded = mySites.find(s => !legions.some(v => v !== u && near(s, v)));
+  if (unguarded && legions.length > must.length) {
+    if (near(unguarded, u)) { u.mp = 0; return; }
+    stepToward(u, distField(siteCells(unguarded).map(c => ({ x: c[0], y: c[1] })))); return;
+  }
+  if (u.hp < D.hp - 1 && !G.units.some(v => v.owner === e && cheb(v, u) <= 2 && vis(v))) { u.mp = 0; return; }
+  // kootaan joukko ennen hyökkäystä
+  const eTowns = G.towns.filter(t => t.owner === e && explored(p, t.x, t.y));
+  const eSites = G.sites.filter(s => s.owner === e);
+  const goals = eTowns.map(t => ({ x: t.x, y: t.y }))
+    .concat(eSites.flatMap(s => siteCells(s).map(c => ({ x: c[0], y: c[1] }))))
+    .concat(G.units.filter(v => v.owner === e && vis(v)).map(v => ({ x: v.x, y: v.y })));
+  if (!goals.length) {                       // vihollista ei tunneta: tutkitaan sumua
+    const unk = []; for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (!G.exp[p][IDX(x, y)] && tile(x, y).t !== 'vesi') unk.push({ x, y });
+    if (unk.length) { stepToward(u, distField(unk)); } else u.mp = 0;
+    return;
+  }
+  const army = legions.filter(v => !(townAt(v.x, v.y) && townAt(v.x, v.y).owner === p));
+  if (army.length < 4 && G.turn < 26 && !G.units.some(v => v.owner === e && cheb(v, u) <= 3 && vis(v)) && !eSites.some(s => s.done || s.prog > 20)) {
+    const field = distField(eTowns.map(t => ({ x: t.x, y: t.y })).concat(eSites.map(s => ({ x: s.x, y: s.y }))));
+    const rally = towns.slice().sort((a, b) => field[a.y][a.x] - field[b.y][b.x])[0];
+    if (rally && cheb(rally, u) > 2) stepToward(u, distField([{ x: rally.x, y: rally.y }]), (x, y) => townAt(x, y)); else u.mp = 0;
+    return;
+  }
+  stepToward(u, distField(goals));
+  if (G.units.includes(u) && u.mp > 0) { const r2 = computeReach(u); const d = r2.attacks.filter(vis)[0]; if (d && (D.range || UNITS[d.type].worker || u.hp >= 3)) attack(u, d); }
+}
+
+/* =========================================================
+   11. KAMERA JA PIIRTÄMINEN
+   ========================================================= */
+const canvas = $('game'), ctx = canvas.getContext('2d');
+const cam = { x: 0, y: 0, z: 1 };
+let dpr = 1, VW = 0, VH = 0;
+function iso(x, y) { return { x: (x - y) * TW / 2, y: (x + y) * TH / 2 }; }
+function screenToTile(sx, sy) {
+  const wx = sx / cam.z + cam.x, wy = sy / cam.z + cam.y;
+  const a = wx / (TW / 2), b = wy / (TH / 2);
+  return { x: Math.round((a + b) / 2), y: Math.round((b - a) / 2) };
+}
+function resize() {
+  dpr = Math.min(3, window.devicePixelRatio || 1); VW = innerWidth; VH = innerHeight;
+  canvas.width = Math.round(VW * dpr); canvas.height = Math.round(VH * dpr);
+  clampCam();
+}
+function clampCam() {
+  const minX = -ROWS * TW / 2, maxX = COLS * TW / 2, minY = 0, maxY = (COLS + ROWS) * TH / 2;
+  const vw = VW / cam.z, vh = VH / cam.z;
+  cam.x = Math.min(maxX - vw * 0.3, Math.max(minX - vw * 0.7, cam.x));
+  cam.y = Math.min(maxY - vh * 0.3, Math.max(minY - vh * 0.7, cam.y));
+}
+let camAnim = null;
+function centerOn(o, smooth) {
+  if (!o) return;
+  const p = iso(o.x, o.y), tx = p.x - VW / cam.z / 2, ty = p.y - VH / cam.z / 2;
+  if (smooth) camAnim = { x: tx, y: ty }; else { cam.x = tx; cam.y = ty; clampCam(); }
+}
+function zoomAt(f, sx, sy) {
+  const wx = sx / cam.z + cam.x, wy = sy / cam.z + cam.y;
+  cam.z = Math.min(2.6, Math.max(0.35, cam.z * f));
+  cam.x = wx - sx / cam.z; cam.y = wy - sy / cam.z; camAnim = null; clampCam();
+}
+function diamondPath(cx, cy, s = 1) {
+  ctx.beginPath(); ctx.moveTo(cx, cy - TH / 2 * s); ctx.lineTo(cx + TW / 2 * s, cy); ctx.lineTo(cx, cy + TH / 2 * s); ctx.lineTo(cx - TW / 2 * s, cy); ctx.closePath();
+}
+function footPath(x, y, n) {
+  const t = iso(x, y), r = iso(x + n - 1, y), b = iso(x + n - 1, y + n - 1), l = iso(x, y + n - 1);
+  ctx.beginPath(); ctx.moveTo(t.x, t.y - TH / 2); ctx.lineTo(r.x + TW / 2, r.y); ctx.lineTo(b.x, b.y + TH / 2); ctx.lineTo(l.x - TW / 2, l.y); ctx.closePath();
+}
+function drawImg(a, x, y, w, h) { ctx.drawImage(pick(a, w * cam.z * dpr), x, y, w, h); }
+
+function draw(now) {
+  if (camAnim) { cam.x = lerp(cam.x, camAnim.x, 0.18); cam.y = lerp(cam.y, camAnim.y, 0.18); clampCam();
+    if (Math.abs(cam.x - camAnim.x) < 1 && Math.abs(cam.y - camAnim.y) < 1) camAnim = null; }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#0b0a08'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!G) return;
+  const v = viewer(), VV = VIS[v], EX = G.exp[v];
+  const st = (x, y) => SEEALL ? 0 : VV[IDX(x, y)] ? 0 : EX[IDX(x, y)] ? 1 : 2;
+  const s = dpr * cam.z;
+  ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const vx0 = cam.x - TW * 2, vx1 = cam.x + VW / cam.z + TW * 2, vy0 = cam.y - TH * 5, vy1 = cam.y + VH / cam.z + TH * 2;
+  const vis = p => p.x > vx0 && p.x < vx1 && p.y > vy0 && p.y < vy1;
+
+  // maasto + sumu
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const p = iso(x, y); if (!vis(p)) continue;
+    const c = G.map[y][x];
+    if (st(x, y) === 2) { ctx.fillStyle = '#0b0a08'; diamondPath(p.x, p.y, 1.04); ctx.fill(); continue; }
+    drawImg(IMG[TERRAIN[c.t].img[c.v]], p.x - TW / 2 - 0.6, p.y - TH / 2 - 0.4, TW + 1.2, TH + 0.8);
+  }
+  // alueet ja rajat
+  const om = ownerMap();
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const t = om[y][x]; if (!t || st(x, y) === 2) continue; const p = iso(x, y); if (!vis(p)) continue;
+    const col = PLAYERS[t.owner].color;
+    ctx.globalAlpha = 0.13; ctx.fillStyle = col; diamondPath(p.x, p.y); ctx.fill(); ctx.globalAlpha = 1;
+    const T = [p.x, p.y - TH / 2], Rr = [p.x + TW / 2, p.y], B = [p.x, p.y + TH / 2], L = [p.x - TW / 2, p.y];
+    const edges = [[1, 0, Rr, B], [-1, 0, T, L], [0, 1, B, L], [0, -1, T, Rr]];
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (const [dx, dy, a1, a2] of edges) { const nx = x + dx, ny = y + dy; const o = inside(nx, ny) ? om[ny][nx] : null;
+      if (!o || o.owner !== t.owner) { ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.stroke(); } }
+  }
+  // himmennys: tutkittu mutta ei näkyvissä
+  ctx.fillStyle = 'rgba(8,7,5,0.45)';
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) { if (st(x, y) !== 1) continue; const p = iso(x, y); if (!vis(p)) continue; diamondPath(p.x, p.y, 1.02); ctx.fill(); }
+  // korostukset
+  const pulse = 0.5 + 0.5 * Math.sin(now / 260);
+  if (placing) {
+    const list = placeAnchors(), n = placeSize(), cells = new Set();
+    for (const a of list) for (let dy = 0; dy < n; dy++) for (let dx = 0; dx < n; dx++) cells.add(IDX(a.x + dx, a.y + dy));
+    for (const k of cells) { const p = iso(k % COLS, Math.floor(k / COLS)); ctx.fillStyle = `rgba(90,230,110,${0.22 + 0.16 * pulse})`; diamondPath(p.x, p.y, 0.92); ctx.fill(); }
+    if (n > 1) for (const a of list) { const p = iso(a.x, a.y); ctx.fillStyle = 'rgba(255,255,255,0.35)'; diamondPath(p.x, p.y, 0.45); ctx.fill(); }
+    if (hover && inside(hover.x, hover.y)) { const a = anchorFor(list, hover.x, hover.y, n); if (a) { footPath(a.x, a.y, n); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); } }
+  }
+  if (sel && reach && !busy && sel.owner === G.cur) {
+    for (const key of reach.best.keys()) { const p = iso(key % COLS, Math.floor(key / COLS));
+      ctx.fillStyle = 'rgba(255,227,107,0.28)'; diamondPath(p.x, p.y, 0.9); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,227,107,0.6)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    for (const e of reach.attacks) { if (st(e.x, e.y)) continue; const p = iso(e.x, e.y); ctx.fillStyle = `rgba(255,60,50,${0.3 + 0.25 * pulse})`; diamondPath(p.x, p.y, 0.9); ctx.fill(); }
+  }
+  if (!placing && hover && inside(hover.x, hover.y) && st(hover.x, hover.y) < 2) { const p = iso(hover.x, hover.y); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; diamondPath(p.x, p.y, 0.96); ctx.stroke(); }
+
+  // esineet syvyysjärjestyksessä
+  const objs = [];
+  for (const t of G.towns) { if (st(t.x, t.y) < 2) objs.push({ d: t.x + t.y, o: 0, f: () => drawTown(t) });
+    for (const b of t.buildings) if (st(b.x, b.y) < 2) objs.push({ d: b.x + b.y + (bsize(b) - 1), o: 1, f: () => drawBuilding(b) }); }
+  for (const si of G.sites) if (siteCells(si).some(c => st(c[0], c[1]) < 2)) objs.push({ d: si.x + si.y + 1, o: 1, f: () => drawSite(si, now) });
+  const dt = Math.min(0.05, (now - (draw.last || now)) / 1000); draw.last = now;
+  for (const u of G.units) {
+    animUnit(u, dt);
+    if (u.owner !== G.cur && !SEEALL && !(u.owner === v) && !VV[IDX(u.x, u.y)]) continue;
+    if (u.owner !== v && !SEEALL && !VV[IDX(u.x, u.y)]) continue;
+    let d = u.rx + u.ry + 0.01;
+    if (!u.path.length) { const bb = buildingAt(u.x, u.y), ss = siteAt(u.x, u.y); if (bb && bsize(bb.b) > 1) d = Math.max(d, bb.b.x + bb.b.y + 1.5); if (ss) d = Math.max(d, ss.x + ss.y + 2.5); }
+    objs.push({ d, o: 2, f: () => drawUnit(u, now) });
+  }
+  objs.sort((a, b) => a.d - b.d || a.o - b.o);
+  for (const o of objs) o.f();
+
+  for (let i = floats.length - 1; i >= 0; i--) { const f = floats[i], age = (now - f.t) / 1400;
+    if (age > 1) { floats.splice(i, 1); continue; }
+    if (st(Math.round(f.x), Math.round(f.y)) !== 0) continue;
+    const p = iso(f.x, f.y); ctx.globalAlpha = 1 - age * age; ctx.font = 'bold 20px Georgia'; ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText(f.s, p.x, p.y - 70 - age * 40); ctx.fillStyle = f.c; ctx.fillText(f.s, p.x, p.y - 70 - age * 40); ctx.globalAlpha = 1; }
+
+  // ruutukoordinaatiston piirto: nimet, kauppakeskusten nimet, työmaiden merkit
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W2S = (px, py) => [(px - cam.x) * cam.z, (py - cam.y) * cam.z];
+  for (const t of G.towns) { if (st(t.x, t.y) === 2) continue; const p = iso(t.x, t.y); const [sx, sy0] = W2S(p.x, p.y), sy = sy0 - 64 * cam.z - 14;
+    ctx.font = 'bold 14px Georgia'; const w = ctx.measureText(t.name).width + 18;
+    ctx.fillStyle = PLAYERS[t.owner].dark; ctx.strokeStyle = '#f4df9b'; ctx.lineWidth = 1.5;
+    roundRect(sx - w / 2, sy - 11, w, 22, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.name, sx, sy + 1); ctx.textBaseline = 'alphabetic'; }
+  if (cam.z >= 0.6) for (const t of G.towns) for (const b of t.buildings) if (b.name && st(b.x, b.y) < 2) {
+    const p = iso(b.x, b.y), [sx, sy0] = W2S(p.x, p.y), sy = sy0 + TH / 2 * cam.z + 9;
+    ctx.font = '12px Georgia'; const w = ctx.measureText(b.name).width + 12; ctx.fillStyle = '#000b'; roundRect(sx - w / 2, sy - 9, w, 18, 5); ctx.fill();
+    ctx.fillStyle = '#ffe9a8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.name, sx, sy + 1); ctx.textBaseline = 'alphabetic'; }
+  for (const si of G.sites) {                 // työmaat näkyvät aina, myös sumussa
+    const P = PROJECTS[si.type], c = iso(si.x + 0.5, si.y + 0.5), [sx, sy0] = W2S(c.x, c.y), sy = sy0 - 120 * cam.z;
+    const txt = P.icon + ' ' + P.name + (si.done ? ' ✓' : ' ' + Math.floor(si.prog) + '/' + P.total);
+    ctx.font = 'bold 12px Georgia'; const w = ctx.measureText(txt).width + 16;
+    const cx = Math.min(VW - w / 2 - 6, Math.max(w / 2 + 6, sx)), cy = Math.min(VH - 80, Math.max(66, sy));
+    ctx.fillStyle = PLAYERS[si.owner].dark; ctx.strokeStyle = si.done ? '#ffe36b' : '#f4df9b'; ctx.lineWidth = 1.5; roundRect(cx - w / 2, cy - 11, w, 22, 6); ctx.fill(); ctx.stroke();
+    if (!si.done) { ctx.fillStyle = '#4a8a3a'; roundRect(cx - w / 2 + 3, cy + 6, (w - 6) * si.prog / P.total, 4, 2); ctx.fill(); }
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, cx, cy - 1); ctx.textBaseline = 'alphabetic';
+  }
+}
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function poly(pts, fill) { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) ctx.lineTo(q[0], q[1]); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); }
+function house(cx, cy, s, roof, roofDark, h = 0.5) {
+  const w = s, d = s / 2, H = s * h;
+  poly([[cx - w / 2, cy], [cx, cy + d / 2], [cx, cy + d / 2 - H], [cx - w / 2, cy - H]], '#e3d7bb');
+  poly([[cx, cy + d / 2], [cx + w / 2, cy], [cx + w / 2, cy - H], [cx, cy + d / 2 - H]], '#b8a888');
+  const apex = [cx, cy - H - s * 0.42];
+  poly([[cx - w / 2 - 2, cy - H], [cx, cy + d / 2 - H + 1], apex], roofDark);
+  poly([[cx, cy + d / 2 - H + 1], [cx + w / 2 + 2, cy - H], apex], roof);
+  ctx.fillStyle = '#4a3a28'; ctx.fillRect(cx + w * 0.14, cy - H * 0.55, w * 0.12, H * 0.5);
+}
+function drawTown(t) {
+  const p = iso(t.x, t.y), P = PLAYERS[t.owner];
+  ctx.fillStyle = '#a99f8c'; diamondPath(p.x, p.y, 0.9); ctx.fill();
+  ctx.strokeStyle = '#6f6656'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(80,70,55,0.35)'; ctx.lineWidth = 1;
+  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(p.x + i * 8 - 24, p.y - 12 + i * 4 + 12); ctx.lineTo(p.x + i * 8 + 24, p.y + i * 4 - 12 + 12); ctx.stroke(); }
+  house(p.x - 28, p.y - 2, 30, P.color, P.dark);
+  house(p.x + 26, p.y - 4, 28, P.color, P.dark);
+  const cx = p.x, cy = p.y - 14;
+  house(cx, cy, 26, '#5b4a3a', '#3e3226', 1.2);
+  ctx.strokeStyle = '#3e3226'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy - 26 * 1.2 - 11); ctx.lineTo(cx, cy - 26 * 1.2 - 22); ctx.stroke();
+  const fx = p.x + 40, fy = p.y + 8;
+  ctx.strokeStyle = '#2b2116'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 54); ctx.stroke();
+  const wave = Math.sin(performance.now() / 300) * 2;
+  poly([[fx, fy - 54], [fx + 22, fy - 49 + wave], [fx, fy - 42]], P.color);
+}
+function drawBuilding(b) {
+  const B = BUILDINGS[b.type], a = IMG[B.img], n = bsize(b);
+  const c = iso(b.x + (n - 1) / 2, b.y + (n - 1) / 2);
+  const w = TW * n * 0.98, h = a.h * w / a.w;
+  drawImg(a, c.x - w / 2, c.y + TH / 2 * n - h + 1, w, h);
+}
+function drawSite(si, now) {
+  const P = PROJECTS[si.type], a = IMG[P.img], c = iso(si.x + 0.5, si.y + 0.5);
+  const w = TW * 2 * 0.98, h = a.h * w / a.w, x0 = c.x - w / 2, y0 = c.y + TH - h + 1;
+  const frac = si.done ? 1 : Math.min(1, si.prog / P.total);
+  if (!si.done) {
+    ctx.globalAlpha = 0.55; ctx.drawImage(ghostOf(a), x0, y0, w, h); ctx.globalAlpha = 1;
+    const rh = h * frac; ctx.save(); ctx.beginPath(); ctx.rect(x0 - 2, y0 + h - rh, w + 4, rh + 2); ctx.clip(); drawImg(a, x0, y0, w, h); ctx.restore();
+    footPath(si.x, si.y, 2); ctx.setLineDash([10, 7]); ctx.strokeStyle = PLAYERS[si.owner].color; ctx.lineWidth = 4; ctx.stroke(); ctx.setLineDash([]);
+  } else {
+    footPath(si.x, si.y, 2); ctx.strokeStyle = `rgba(255,227,107,${0.5 + 0.4 * Math.sin(now / 350)})`; ctx.lineWidth = 5; ctx.stroke();
+    drawImg(a, x0, y0, w, h);
+  }
+  // omistajan lippu
+  const f = iso(si.x + 1, si.y + 2), fx = f.x - TW * 0.62, fy = f.y;
+  ctx.strokeStyle = '#2b2116'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 58); ctx.stroke();
+  const wave = Math.sin(now / 300) * 2; poly([[fx, fy - 58], [fx + 24, fy - 52 + wave], [fx, fy - 44]], PLAYERS[si.owner].color);
+}
+function animUnit(u, dt) {
+  if (!u.path.length) { u.rx = u.x; u.ry = u.y; return; }
+  const tg = u.path[0], sp = 7 * dt, dx = tg.x - u.rx, dy = tg.y - u.ry, d = Math.hypot(dx, dy);
+  if (d <= sp) { u.rx = tg.x; u.ry = tg.y; u.path.shift(); } else { u.rx += dx / d * sp; u.ry += dy / d * sp; }
+}
+function drawUnit(u, now) {
+  const d = UNITS[u.type], P = PLAYERS[u.owner], a = IMG[d.img + '_' + P.img];
+  const p = iso(u.rx, u.ry);
+  let shx = 0; if (u.shake && now - u.shake < 400) shx = Math.sin((now - u.shake) / 25) * 4;
+  const h = d.h, w = a.w * h / a.h, fy = p.y + TH * 0.16;
+  if (u === sel) { ctx.strokeStyle = `rgba(255,227,107,${0.6 + 0.4 * Math.sin(now / 200)})`; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(p.x, fy, 30, 13, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(0,0,0,0.33)'; ctx.beginPath(); ctx.ellipse(p.x, fy, Math.min(w * 0.38, 34), 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = (u.owner === G.cur && u.mp === 0 && !G.ai[G.cur]) ? 0.8 : 1;
+  drawImg(a, p.x - w / 2 + shx, fy - h + 4, w, h);
+  ctx.globalAlpha = 1;
+  const bx = p.x - Math.min(w / 2, 36) - 4, by = fy - h + 2;
+  poly([[bx - 9, by], [bx + 9, by], [bx + 9, by + 20], [bx, by + 26], [bx - 9, by + 20]], P.dark);
+  ctx.strokeStyle = '#f4df9b'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(u.hp, bx, by + 11); ctx.textBaseline = 'alphabetic';
+  const frac = u.hp / d.hp; ctx.fillStyle = '#000a'; ctx.fillRect(p.x - 18, fy + 9, 36, 5);
+  ctx.fillStyle = frac > 0.6 ? '#5fd35f' : frac > 0.3 ? '#e8c440' : '#e05040'; ctx.fillRect(p.x - 18, fy + 9, 36 * frac, 5);
+  const wy = workerYield(u); const k = Object.keys(wy)[0];
+  if (k && !u.path.length) { ctx.font = '15px Arial'; ctx.textAlign = 'center'; ctx.fillText(RES[k], p.x + Math.min(w / 2, 36) + 2, fy - h + 16); }
+  else if (UNITS[u.type].worker && !u.path.length && siteAt(u.x, u.y) && siteAt(u.x, u.y).owner === u.owner && !siteAt(u.x, u.y).done) { ctx.font = '15px Arial'; ctx.textAlign = 'center'; ctx.fillText('🔨', p.x + 30, fy - h + 16); }
+}
+function addFloat(x, y, s, c) { floats.push({ x, y, s, c, t: performance.now() }); }
+function loop(now) { draw(now); requestAnimationFrame(loop); }
+
+/* =========================================================
+   12. KÄYTTÖLIITTYMÄ
+   ========================================================= */
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
+  $('toasts').appendChild(el); setTimeout(() => el.remove(), 4300);
+  while ($('toasts').children.length > 4) $('toasts').firstChild.remove();
+}
+function updateHUD() {
+  if (!G) return;
+  const p = G.cur, P = PLAYERS[p], r = G.res[p], inc = income(p);
+  $('pDot').style.background = P.color;
+  $('pName').textContent = P.name + (G.ai[p] ? ' (AI)' : '');
+  $('rGold').textContent = r.gold; $('rWork').textContent = r.work; $('rFun').textContent = r.fun; $('rSci').textContent = r.sci;
+  for (const [k, id] of [['gold', 'iGold'], ['work', 'iWork'], ['fun', 'iFun'], ['sci', 'iSci']]) { const el = $(id); el.textContent = (inc[k] >= 0 ? '+' : '') + inc[k]; el.className = inc[k] < 0 ? 'neg' : ''; }
+  $('year').textContent = yearText();
+  // tutkimus
+  const T = G.tech[p], rs = $('research'), human = !G.ai[p];
+  rs.classList.toggle('hidden', !human || G.over);
+  if (human) {
+    if (T.cur) { const t = TECHS[T.cur], pr = T.prog[T.cur] || 0; rs.classList.remove('pulse'); rs.innerHTML = `🔬 ${t.name} <b>${Math.floor(pr)}/${t.cost}</b><div class="bar"><i style="width:${Math.min(100, pr / t.cost * 100)}%"></i></div>`; }
+    else if (availTechs(p).length) { rs.classList.add('pulse'); rs.innerHTML = '🔬 Valitse tutkimus'; }
+    else rs.innerHTML = '🔬 Kaikki tutkittu';
+    rs.onclick = () => openTech();
+    $('bTech').classList.toggle('pulse', !T.cur && availTechs(p).length > 0);
+  }
+  const u = sel && G.units.includes(sel) ? sel : null;
+  $('unitCard').classList.toggle('hidden', !u);
+  if (u) {
+    const d = UNITS[u.type];
+    $('uImg').src = 'assets/' + d.img + '_' + P.img + '.png';
+    $('uName').textContent = d.name;
+    let st = `HP ${u.hp}/${d.hp} · Liike ${u.mp}/${d.mp}<br>⚔️ ${d.att}${d.range ? ' (kantama ' + d.range + ')' : ''} · 🛡️ ${defenseOf(u)} · ${TERRAIN[tile(u.x, u.y).t].name}`;
+    if (d.worker) st += `<br>Töissä: ${siteAt(u.x, u.y) ? 'työmaalla (+50 %)' : yieldText(workerYield(u))}`;
+    $('uStats').innerHTML = st;
+    $('aFound').classList.toggle('hidden', !d.worker);
+    $('aFound').disabled = !canFound(u) || u.owner !== G.cur;
+    const t = townAt(u.x, u.y); $('aTown').classList.toggle('hidden', !(t && t.owner === G.cur));
+  }
+  const left = G.units.some(v => v.owner === p && v.mp > 0 && !v.skip);
+  $('endTurn').classList.toggle('pulse', !left && !G.ai[p]);
+  $('endTurn').disabled = busy || G.ai[p];
+}
+function showTileInfo(t) {
+  if (!G || !t || !inside(t.x, t.y)) { $('tileInfo').classList.add('hidden'); return; }
+  const v = viewer();
+  if (!explored(v, t.x, t.y)) { $('tileInfo').innerHTML = '<b>Tutkimaton alue</b>'; $('tileInfo').classList.remove('hidden'); return; }
+  const c = tile(t.x, t.y), T = TERRAIN[c.t], b = buildingAt(t.x, t.y), tw = townAt(t.x, t.y), si = siteAt(t.x, t.y);
+  let s = `<b>${tw ? tw.name : b ? (b.b.name || BUILDINGS[b.b.type].name) : si ? PROJECTS[si.type].name : T.name}</b>`;
+  if (tw) s += ' · taajaman keskus +1 🪙 +1 🔨 +1 📜';
+  else if (b) s += ' · ' + yieldText(bYield(b.t.owner, b.b.type));
+  else if (si) s += ' · ' + (si.done ? 'valmis' : 'työmaa ' + Math.floor(si.prog) + '/' + PROJECTS[si.type].total);
+  else if (!T.water) s += ` · ${yieldText(T.yield)} · liike ${T.cost}${T.def ? ' · puolustus +' + T.def : ''}`;
+  else s += ' · ei kulkua';
+  $('tileInfo').innerHTML = s; $('tileInfo').classList.remove('hidden');
+}
+
+/* ---------- osoitin ---------- */
+const ptrs = new Map(); let drag = null, pinch = null, pinched = false;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) { drag = { sx: e.clientX, sy: e.clientY, cx: cam.x, cy: cam.y, moved: false }; pinched = false; camAnim = null; }
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; pinched = true; }
 });
-addEventListener('keydown',e=>{if(busy)return;const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(m){e.preventDefault();const a=units[active];if(a&&a.owner===activeOwner)moveTo(a.x+m[0],a.y+m[1])}});
-function loop(){draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-</script></body></html>
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse' && !ptrs.size) { hover = screenToTile(e.clientX, e.clientY); showTileInfo(hover); return; }
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2 && pinch) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomAt(pinch.z * d / pinch.d / cam.z, (a.x + b.x) / 2, (a.y + b.y) / 2); return;
+  }
+  if (drag) {
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
+    if (drag.moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); }
+  }
+});
+function endPtr(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (ptrs.size === 0) {
+    if (drag && !drag.moved && !pinched && e.type === 'pointerup') { const t = screenToTile(e.clientX, e.clientY); onTap(t.x, t.y); if (e.pointerType !== 'mouse') showTileInfo(t); }
+    drag = null; pinch = null;
+  } else if (ptrs.size === 1) { const [a] = [...ptrs.values()]; drag = { sx: a.x, sy: a.y, cx: cam.x, cy: cam.y, moved: true }; pinch = null; }
+}
+canvas.addEventListener('pointerup', endPtr);
+canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+addEventListener('keydown', e => {
+  if (!G || !$('menu').classList.contains('hidden') || !$('cover').classList.contains('hidden')) return;
+  if (e.key === 'Escape') { closeModals(); placing = null; $('placeBar').classList.add('hidden'); }
+  const modal = ['townModal', 'techModal', 'winModal', 'helpModal'].some(m => !$(m).classList.contains('hidden'));
+  if (busy || G.ai[G.cur] || modal || G.over) return;
+  if (e.key === 'Enter') endTurn();
+  else if (e.key === 'n' || e.key === 'N') selectNext(true);
+  else if (e.key === ' ') { e.preventDefault(); $('aSkip').click(); }
+  else if (e.key === 't' || e.key === 'T') openTech();
+  else { const m = { ArrowLeft: [-60, 0], ArrowRight: [60, 0], ArrowUp: [0, -60], ArrowDown: [0, 60] }[e.key];
+    if (m) { e.preventDefault(); cam.x += m[0] / cam.z; cam.y += m[1] / cam.z; clampCam(); } }
+});
+addEventListener('resize', resize);
+
+$('endTurn').onclick = () => endTurn();
+$('aNext').onclick = () => selectNext(true);
+$('aSkip').onclick = () => { if (sel) { sel.skip = true; selectNext(true); updateHUD(); } };
+$('aFound').onclick = () => { const u = sel; if (u && canFound(u)) { G.units = G.units.filter(w => w !== u); const t = foundTown(u.owner, u.x, u.y); sel = null; reach = null; updateHUD(); openTown(t); } };
+$('aTown').onclick = () => { if (sel) { const t = townAt(sel.x, sel.y); if (t) openTown(t); } };
+$('zIn').onclick = () => zoomAt(1.25, VW / 2, VH / 2);
+$('zOut').onclick = () => zoomAt(0.8, VW / 2, VH / 2);
+$('bTech').onclick = () => { if (G && !G.ai[G.cur] && !busy) openTech(); };
+$('bWin').onclick = () => { if (G && !G.ai[G.cur] && !busy) openWin(); };
+$('help').onclick = () => $('helpModal').classList.remove('hidden');
+$('mHelp').onclick = () => $('helpModal').classList.remove('hidden');
+$('helpClose').onclick = () => $('helpModal').classList.add('hidden');
+$('placeCancel').onclick = () => { placing = null; $('placeBar').classList.add('hidden'); };
+for (const m of ['townModal', 'techModal', 'winModal']) $(m).addEventListener('pointerdown', e => { if (e.target === $(m)) closeModals(); });
+$('mAI').onclick = () => startGame(true);
+$('mHot').onclick = () => startGame(false);
+$('mLoad').onclick = () => { if (load()) { $('menu').classList.add('hidden'); afterLoad(); } };
+$('overNew').onclick = () => { $('overModal').classList.add('hidden'); $('menu').classList.remove('hidden'); G = null; checkSave(); $('research').classList.add('hidden'); };
+
+function startGame(ai) {
+  $('menu').classList.add('hidden');
+  cam.z = VW < 700 ? 0.75 : 1;
+  newGame(ai);
+  toast(ai ? 'Pelaat Nikkilällä. Söderkullaa ohjaa tekoäly. Voita täyttämällä kaksi kolmesta voittopolusta 🏆' : 'Kaksinpeli: vuorot vaihtuvat samalla laitteella.');
+}
+
+/* ---------- tallennus ---------- */
+function save() { try { if (G && !G.over) localStorage.setItem(SAVE_KEY, JSON.stringify(G, (k, v) => (k === 'path' ? [] : k === 'shake' ? undefined : v))); } catch (e) {} }
+function load() {
+  try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; G = JSON.parse(s); if (G.v !== 2) { G = null; return false; }
+    for (const u of G.units) { u.rx = u.x; u.ry = u.y; u.path = []; } updateVision(); return true; } catch (e) { G = null; return false; }
+}
+function checkSave() { let has = false; try { const s = localStorage.getItem(SAVE_KEY); has = !!s && s.includes('"v":2'); } catch (e) {} $('mLoad').classList.toggle('hidden', !has); }
+function afterLoad() {
+  cam.z = VW < 700 ? 0.75 : 1; updateHUD();
+  if (G.ai[G.cur]) runAI(); else { selectNext(true); if (!sel) centerOn(G.towns.find(t => t.owner === G.cur)); }
+}
+
+/* ---------- käynnistys ---------- */
+resize();
+loadAssets().then(() => { checkSave(); requestAnimationFrame(loop); })
+  .catch(err => { document.querySelector('#menu p').textContent = err; });
+</script>
+</body>
+</html>
